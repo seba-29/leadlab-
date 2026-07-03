@@ -2,6 +2,49 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
+
+function ThemeToggle() {
+  const [theme, setTheme] = useState<"dark" | "light">("dark");
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("leadlab-theme");
+      if (saved === "light" || saved === "dark") setTheme(saved);
+    } catch {
+      /* localStorage no disponible */
+    }
+  }, []);
+
+  function apply(t: "dark" | "light") {
+    setTheme(t);
+    document.documentElement.setAttribute("data-theme", t);
+    try {
+      localStorage.setItem("leadlab-theme", t);
+    } catch {
+      /* ignore */
+    }
+  }
+
+  return (
+    <div className="theme-toggle" role="group" aria-label="Tema de la consola">
+      <button
+        className={theme === "light" ? "on" : ""}
+        aria-pressed={theme === "light"}
+        onClick={() => apply("light")}
+      >
+        ☀️ Claro
+      </button>
+      <button
+        className={theme === "dark" ? "on" : ""}
+        aria-pressed={theme === "dark"}
+        onClick={() => apply("dark")}
+      >
+        🌙 Oscuro
+      </button>
+    </div>
+  );
+}
 
 const NAV = [
   {
@@ -103,6 +146,7 @@ export default function ConsolaLayout({ children }: { children: React.ReactNode 
               <div className="con-user-role">Operador · Lead Lab</div>
             </div>
           </div>
+          <ThemeToggle />
         </div>
       </aside>
       <main className="con-main">{children}</main>
