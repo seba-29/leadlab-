@@ -1,5 +1,7 @@
 # 08 — Fases de Construcción (el plan de build)
 
+> **Estado:** Fases 0, 1 y 2 construidas ✅ (consola completa en `plataforma/` con datos demo locales). La autenticación y Supabase se integran al inicio de la Fase 3, junto con el canal real.
+
 > Cómo construimos el producto, en el orden que ship-ea. Cada fase produce algo **que funciona y se puede mostrar**, no un pedazo suelto. Clave: **el 80% se construye SIN Meta**, así no nos quedamos pegados esperando el desbloqueo.
 
 ## Stack (definido)

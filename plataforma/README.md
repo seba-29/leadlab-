@@ -1,6 +1,16 @@
 # Lead Lab — Plataforma
 
-App Next.js de Lead Lab. **Fase 1:** el agente **Lía** vivo + un playground web para conversar con ella y probarla, sin depender de WhatsApp ni de Meta.
+La consola de Lead Lab (Fase 2): multi-tenant, con el agente corriendo en código y cinco pestañas:
+
+| Pestaña | Qué hace |
+|---|---|
+| **Dashboard** | Métricas de los últimos 7 días: conversaciones, leads, citas, pipeline y gráfico de leads/día |
+| **Probar agentes** | Conversa con cualquier agente (Lía o el de un cliente) como si fueras un cliente real. Las pruebas quedan en el Inbox y los leads caen al Kanban |
+| **Inbox** | Todas las conversaciones de todos los clientes. "Tomar conversación" pausa el bot y respondes tú; "Devolver al agente" lo reactiva |
+| **Leads** | Kanban con drag & drop: Nuevo → Contactado → Agendado → Ganado → Perdido |
+| **Cerebro** | Editor del conocimiento de cada agente (servicios, precios, tono, reglas) con vista previa del prompt |
+
+Viene con datos demo realistas: **Lía** (agente interno de Lead Lab) y **Sofía** (agente de "Clínica Aurora", clienta de ejemplo — sirve además para demos con prospectos).
 
 ## Cómo correrlo
 
@@ -11,24 +21,31 @@ cp .env.example .env.local      # y pega tu ANTHROPIC_API_KEY
 npm run dev
 ```
 
-Abre http://localhost:3000 y conversa con Lía. Verás cómo:
-- responde en chileno, cálido y natural,
-- califica al prospecto (qué negocio, si pautea, por dónde le llegan las consultas),
-- **captura el lead** en el panel de la derecha en vivo,
-- agenda una llamada o deriva a un humano cuando corresponde.
+Abre **http://localhost:3000** → redirige a la consola.
+
+Prueba el flujo completo: ve a **Probar agentes** → elige a Sofía → escríbele *"hola, cuánto sale el botox?"* → dale tu nombre → mira cómo el lead aparece en **Leads** y la conversación en **Inbox**. Ese loop es el producto.
 
 ## Estructura
 
 ```
 plataforma/
   app/
-    page.tsx            # el playground (chat + panel de leads)
-    layout.tsx
-    globals.css         # sistema de diseño naranjo / liquid glass
-    api/chat/route.ts   # endpoint que corre el agente
+    consola/
+      layout.tsx        # sidebar y navegación
+      page.tsx          # Dashboard (tiles + gráfico)
+      agentes/page.tsx  # Probar agentes (tester en vivo)
+      inbox/page.tsx    # Inbox de conversaciones
+      leads/page.tsx    # Kanban drag & drop
+      cerebro/page.tsx  # Editor del conocimiento por agente
+    api/
+      agentes/[id]/chat # correr un agente (persiste conversación + leads)
+      conversaciones/…  # listar, ver, tomar/soltar/responder
+      leads             # listar + mover de etapa
+      tenants/…         # agentes y su cerebro
+      resumen           # métricas del dashboard
   lib/
-    agent.ts            # Lía: system prompt, herramientas y loop de Claude
-    leads.ts            # store de leads (en memoria por ahora)
+    agent.ts            # motor único de agentes (prompt por tenant + tools + loop Claude)
+    store.ts            # capa de datos (JSON local con seed demo; Fase 3 → Supabase)
 ```
 
 ## Variables de entorno
@@ -36,8 +53,14 @@ plataforma/
 | Variable | Obligatoria | Descripción |
 |---|---|---|
 | `ANTHROPIC_API_KEY` | Sí | Tu API key de Anthropic |
-| `LIA_MODEL` | No | Modelo del agente (default `claude-opus-4-8`) |
+| `AGENT_MODEL` | No | Modelo por defecto de los agentes (default `claude-opus-4-8`) |
 
-## Siguiente (Fase 2)
+## Notas de diseño
 
-Consola multi-tenant con Supabase: auth, inbox de conversaciones, Kanban de leads, dashboard y editor del "cerebro" del agente. El store en memoria de `lib/leads.ts` pasa a Postgres con RLS.
+- **La capa de datos es intercambiable:** `lib/store.ts` expone funciones async con las mismas firmas que tendrá el adaptador de Supabase (Fase 3). Persiste a `.data/store.json` en local; para resetear los datos demo, borra esa carpeta.
+- **Regla de producto en el Inbox:** si un humano responde, el bot se pausa en esa conversación (estado `humano`) hasta que se le devuelve el control.
+- **Prompt caching:** el prompt del sistema de cada tenant se marca con `cache_control` para pagar ~10% del costo en mensajes siguientes.
+
+## Siguiente (Fase 3)
+
+Canal real: WhatsApp Cloud API (webhook → agente → respuesta), Supabase (Postgres + RLS + Realtime) y las conversaciones reales cayendo en vivo a este mismo Inbox.
