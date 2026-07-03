@@ -1844,3 +1844,54 @@ body {
   color: #ff7d7d;
   font-weight: 600;
 }
+
+/* ---- Embudo de conversión ---- */
+.embudo {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.embudo-row {
+  display: grid;
+  grid-template-columns: 96px 1fr 44px;
+  align-items: center;
+  gap: 12px;
+}
+.embudo-label {
+  font-size: 12px;
+  color: var(--muted);
+  text-align: right;
+}
+.embudo-track {
+  background: var(--card);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.embudo-bar {
+  height: 30px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  padding: 0 10px;
+  min-width: 30px;
+  transition: width 0.4s ease;
+}
+.embudo-n {
+  font-size: 12px;
+  font-weight: 700;
+  color: #1a0d06;
+}
+.perdido-bar {
+  background: var(--chip);
+}
+.perdido-bar .embudo-n {
+  color: var(--muted);
+}
+.embudo-conv {
+  font-size: 11px;
+  color: var(--t-lime);
+  font-weight: 600;
+}
+.embudo-perdido .embudo-label {
+  color: var(--faint);
+}

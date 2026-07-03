@@ -60,6 +60,11 @@ const IconConfig = (
     <path d="M12 3v2.4M12 18.6V21M4.5 7l2 1.2M17.5 15.8l2 1.2M4.5 17l2-1.2M17.5 8.2l2-1.2" />
   </svg>
 );
+const IconFunnel = (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+    <path d="M3 5h18l-7 8v6l-4 2v-8L3 5z" />
+  </svg>
+);
 
 type NavItem = { href: string; label: string; icon: ReactNode };
 type NavGroup = { label?: string; items: NavItem[] };
@@ -82,7 +87,10 @@ const NAV_ADMIN: NavGroup[] = [
   },
   {
     label: "Negocio",
-    items: [{ href: "/consola/clientes", label: "Clientes & consumo", icon: IconPeople }],
+    items: [
+      { href: "/consola/clientes", label: "Clientes & consumo", icon: IconPeople },
+      { href: "/consola/conversion", label: "Conversión", icon: IconFunnel },
+    ],
   },
 ];
 
