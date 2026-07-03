@@ -48,6 +48,18 @@ const IconBrain = (
     <path d="M7 9H5.5A1.5 1.5 0 0 0 4 10.5v0A1.5 1.5 0 0 0 5.5 12H7M17 9h1.5A1.5 1.5 0 0 1 20 10.5v0a1.5 1.5 0 0 1-1.5 1.5H17" />
   </svg>
 );
+const IconAgenda = (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+    <rect x="3.5" y="5" width="17" height="16" rx="2" />
+    <path d="M3.5 9.5h17M8 3.5v3M16 3.5v3" />
+  </svg>
+);
+const IconConfig = (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+    <circle cx="12" cy="12" r="3" />
+    <path d="M12 3v2.4M12 18.6V21M4.5 7l2 1.2M17.5 15.8l2 1.2M4.5 17l2-1.2M17.5 8.2l2-1.2" />
+  </svg>
+);
 
 type NavItem = { href: string; label: string; icon: ReactNode };
 type NavGroup = { label?: string; items: NavItem[] };
@@ -80,6 +92,7 @@ const NAV_CLIENTE: NavGroup[] = [
       { href: "/consola", label: "Resumen", icon: IconDash },
       { href: "/consola/inbox", label: "Conversaciones", icon: IconInbox },
       { href: "/consola/leads", label: "Leads", icon: IconLeads },
+      { href: "/consola/agenda", label: "Agenda", icon: IconAgenda },
     ],
   },
   {
@@ -88,6 +101,9 @@ const NAV_CLIENTE: NavGroup[] = [
       { href: "/consola/agentes", label: "Probar mi agente", icon: IconSpark },
       { href: "/consola/cerebro", label: "Ficha del agente", icon: IconBrain },
     ],
+  },
+  {
+    items: [{ href: "/consola/configuracion", label: "Configuración", icon: IconConfig }],
   },
 ];
 

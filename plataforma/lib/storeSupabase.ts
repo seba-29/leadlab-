@@ -281,6 +281,28 @@ export async function updateCerebro(tid: string, cerebro: Cerebro): Promise<Tena
   return data ? rowATenant(data) : undefined;
 }
 
+/** Actualiza datos top-level del negocio (no cerebro, no tipo/plan/id). */
+export async function updateTenant(
+  tid: string,
+  patch: { nombre?: string; rubro?: string; agente?: string; color?: string },
+): Promise<Tenant | undefined> {
+  await ensureSeed();
+  const row: Record<string, unknown> = {};
+  if (patch.nombre !== undefined) row.nombre = patch.nombre;
+  if (patch.rubro !== undefined) row.rubro = patch.rubro;
+  if (patch.agente !== undefined) row.agente = patch.agente;
+  if (patch.color !== undefined) row.color = patch.color;
+  if (Object.keys(row).length === 0) return getTenant(tid);
+  const { data, error } = await sb()
+    .from("tenants")
+    .update(row)
+    .eq("id", tid)
+    .select()
+    .maybeSingle();
+  lanzar("updateTenant", error);
+  return data ? rowATenant(data) : undefined;
+}
+
 export async function listConversaciones(tenantId?: string): Promise<Conversacion[]> {
   await ensureSeed();
   let q = sb().from("conversaciones").select("*").order("actualizado", { ascending: false });

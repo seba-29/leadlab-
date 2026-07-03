@@ -521,6 +521,22 @@ export async function updateCerebro(tid: string, cerebro: Cerebro): Promise<Tena
   return t;
 }
 
+/** Actualiza datos top-level del negocio (no cerebro, no tipo/plan/id). */
+export async function updateTenant(
+  tid: string,
+  patch: { nombre?: string; rubro?: string; agente?: string; color?: string },
+): Promise<Tenant | undefined> {
+  const t = getDb().tenants.find((x) => x.id === tid);
+  if (t) {
+    if (patch.nombre !== undefined) t.nombre = patch.nombre;
+    if (patch.rubro !== undefined) t.rubro = patch.rubro;
+    if (patch.agente !== undefined) t.agente = patch.agente;
+    if (patch.color !== undefined) t.color = patch.color;
+    save();
+  }
+  return t;
+}
+
 export async function listConversaciones(tenantId?: string): Promise<Conversacion[]> {
   const all = getDb().conversaciones;
   const filtered = tenantId ? all.filter((c) => c.tenantId === tenantId) : all;

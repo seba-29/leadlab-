@@ -32,6 +32,13 @@ export async function GET(request: Request) {
     .filter((l) => ["nuevo", "contactado", "agendado"].includes(l.etapa))
     .reduce((sum, l) => sum + (l.valorEstimado ?? 0), 0);
 
+  // % atendido por IA: conversaciones que NO escalaron a humano ni se derivaron.
+  const escaladas = new Set<string>();
+  for (const c of convs) if (c.estado === "humano") escaladas.add(c.id);
+  for (const d of derivaciones) if (d.conversacionId) escaladas.add(d.conversacionId);
+  const porcentajeIa =
+    convs.length < 3 ? null : Math.round(100 * (1 - escaladas.size / convs.length));
+
   // Leads por día — últimos 14 días (serie única para el gráfico)
   const porDia: { dia: string; etiqueta: string; n: number }[] = [];
   for (let i = 13; i >= 0; i--) {
@@ -54,6 +61,7 @@ export async function GET(request: Request) {
     citas7d,
     pipeline,
     derivacionesPendientes: derivaciones.length,
+    porcentajeIa,
     porDia,
     porEtapa,
     ultimosLeads: leads.slice(0, 6),

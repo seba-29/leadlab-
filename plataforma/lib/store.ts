@@ -20,6 +20,7 @@ export const listTenants = impl.listTenants;
 export const getTenant = impl.getTenant;
 export const crearTenant = impl.crearTenant;
 export const updateCerebro = impl.updateCerebro;
+export const updateTenant = impl.updateTenant;
 export const listConversaciones = impl.listConversaciones;
 export const getConversacion = impl.getConversacion;
 export const crearConversacion = impl.crearConversacion;

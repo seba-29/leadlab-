@@ -9,6 +9,7 @@ type Resumen = {
   citas7d: number;
   pipeline: number;
   derivacionesPendientes: number;
+  porcentajeIa: number | null;
   porDia: { dia: string; etiqueta: string; n: number }[];
   porEtapa: Record<string, number>;
   ultimosLeads: {
@@ -72,6 +73,11 @@ export default function Dashboard() {
         <Tile label="Leads nuevos" value={String(data.leadsNuevos7d)} hint="últimos 7 días" accent />
         <Tile label="Citas agendadas" value={String(data.citas7d)} hint="últimos 7 días" />
         <Tile label="Pipeline abierto" value={CLP.format(data.pipeline)} hint="valor estimado en juego" />
+        <Tile
+          label="Atendido por IA"
+          value={data.porcentajeIa != null ? `${data.porcentajeIa}%` : "—"}
+          hint="sin intervención humana"
+        />
       </div>
 
       <div className="dash-grid">
