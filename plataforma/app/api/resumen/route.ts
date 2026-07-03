@@ -5,13 +5,22 @@ export const dynamic = "force-dynamic";
 
 const DIA_MS = 24 * 60 * 60 * 1000;
 
-export async function GET() {
-  const [convs, leads, citas, derivaciones] = await Promise.all([
+export async function GET(request: Request) {
+  const tenantId = new URL(request.url).searchParams.get("tenantId");
+  const [convsAll, leadsAll, citasAll, derivacionesAll] = await Promise.all([
     listConversaciones(),
     listLeads(),
     listCitas(),
     listDerivaciones(),
   ]);
+
+  // Scope por subcuenta: si viene ?tenantId, filtramos todo a ese tenant.
+  const of = <T extends { tenantId: string }>(arr: T[]) =>
+    tenantId ? arr.filter((x) => x.tenantId === tenantId) : arr;
+  const convs = of(convsAll);
+  const leads = of(leadsAll);
+  const citas = of(citasAll);
+  const derivaciones = of(derivacionesAll);
 
   const hace7 = Date.now() - 7 * DIA_MS;
   const en7dias = (iso: string) => new Date(iso).getTime() >= hace7;

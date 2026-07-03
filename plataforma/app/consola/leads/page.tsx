@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useAccount, scopedUrl } from "../_account/AccountContext";
 
 type Lead = {
   id: string;
@@ -35,31 +36,24 @@ const CLP = new Intl.NumberFormat("es-CL", {
 });
 
 export default function Kanban() {
+  const { scope, isAdmin, tenants } = useAccount();
   const [leads, setLeads] = useState<Lead[]>([]);
-  const [tenants, setTenants] = useState<Tenant[]>([]);
   const [filtro, setFiltro] = useState<string>("");
   const [dragId, setDragId] = useState<string | null>(null);
   const [overCol, setOverCol] = useState<string | null>(null);
   const [selLead, setSelLead] = useState<Lead | null>(null);
   const [nuevo, setNuevo] = useState(false);
 
-  function cargar(f = filtro) {
-    fetch(`/api/leads${f ? `?tenantId=${f}` : ""}`)
+  function cargar(tid: string | null = isAdmin ? filtro || null : scope) {
+    fetch(scopedUrl("/api/leads", tid))
       .then((r) => r.json())
       .then((d) => setLeads(d.leads ?? []))
       .catch(() => {});
   }
 
   useEffect(() => {
-    fetch("/api/tenants")
-      .then((r) => r.json())
-      .then((d) => setTenants(d.tenants ?? []))
-      .catch(() => {});
-  }, []);
-
-  useEffect(() => {
-    cargar(filtro);
-  }, [filtro]); // eslint-disable-line react-hooks/exhaustive-deps
+    cargar();
+  }, [filtro, scope]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function mover(leadId: string, etapa: string) {
     setLeads((ls) => ls.map((l) => (l.id === leadId ? { ...l, etapa } : l)));
@@ -87,14 +81,16 @@ export default function Kanban() {
           </p>
         </div>
         <div className="con-head-actions">
-          <select className="con-select" value={filtro} onChange={(e) => setFiltro(e.target.value)}>
-            <option value="">Todos los clientes</option>
-            {tenants.map((t) => (
-              <option key={t.id} value={t.id}>
-                {t.nombre}
-              </option>
-            ))}
-          </select>
+          {isAdmin && (
+            <select className="con-select" value={filtro} onChange={(e) => setFiltro(e.target.value)}>
+              <option value="">Todos los clientes</option>
+              {tenants.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.nombre}
+                </option>
+              ))}
+            </select>
+          )}
           <button className="btn-primary-lg btn-md" onClick={() => setNuevo(true)}>
             + Lead
           </button>
@@ -144,8 +140,8 @@ export default function Kanban() {
                       <div className="kb-card-int">{l.interes ?? l.negocio}</div>
                     )}
                     <div className="kb-card-meta">
-                      <span className="kb-dot" style={{ background: l.tenantColor }} />
-                      {l.tenantNombre} · {l.fuente}
+                      {isAdmin && <span className="kb-dot" style={{ background: l.tenantColor }} />}
+                      {isAdmin ? `${l.tenantNombre} · ${l.fuente}` : l.fuente}
                     </div>
                   </div>
                 ))}
@@ -169,7 +165,8 @@ export default function Kanban() {
       {nuevo && (
         <NuevoLead
           tenants={tenants}
-          defaultTenant={filtro || tenants[0]?.id || ""}
+          soloTenant={!isAdmin}
+          defaultTenant={(isAdmin ? filtro : scope) || tenants[0]?.id || ""}
           onClose={() => setNuevo(false)}
           onSaved={() => {
             setNuevo(false);
@@ -292,11 +289,13 @@ function LeadDrawer({
 function NuevoLead({
   tenants,
   defaultTenant,
+  soloTenant,
   onClose,
   onSaved,
 }: {
   tenants: Tenant[];
   defaultTenant: string;
+  soloTenant?: boolean;
   onClose: () => void;
   onSaved: () => void;
 }) {
@@ -342,20 +341,22 @@ function NuevoLead({
             ×
           </button>
         </div>
-        <label className="field">
-          <span>Cliente</span>
-          <select
-            className="con-select drawer-select"
-            value={f.tenantId}
-            onChange={(e) => setF({ ...f, tenantId: e.target.value })}
-          >
-            {tenants.map((t) => (
-              <option key={t.id} value={t.id}>
-                {t.nombre}
-              </option>
-            ))}
-          </select>
-        </label>
+        {!soloTenant && (
+          <label className="field">
+            <span>Cliente</span>
+            <select
+              className="con-select drawer-select"
+              value={f.tenantId}
+              onChange={(e) => setF({ ...f, tenantId: e.target.value })}
+            >
+              {tenants.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.nombre}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
         <div className="cb-row">
           <label className="field">
             <span>Nombre *</span>

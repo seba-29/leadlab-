@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useAccount } from "../_account/AccountContext";
 
 type Tenant = {
   id: string;
@@ -16,18 +17,16 @@ type LeadItem = { nombre: string; interes?: string; etapa: string };
 const COLORES = ["#5EEAD4", "#F472B6", "#93C5FD", "#FFC93F", "#A78BFA", "#FF6B2C", "#C6F24E"];
 
 export default function ProbarAgentes() {
-  const [tenants, setTenants] = useState<Tenant[]>([]);
+  const { tenants, scope, isAdmin, current, refreshTenants } = useAccount();
   const [sel, setSel] = useState<Tenant | null>(null);
   const [creando, setCreando] = useState(false);
 
-  function cargar() {
-    fetch("/api/tenants")
-      .then((r) => r.json())
-      .then((d) => setTenants(d.tenants ?? []))
-      .catch(() => {});
-  }
+  const visibles = isAdmin ? tenants : tenants.filter((t) => t.id === scope);
 
-  useEffect(cargar, []);
+  // En modo cliente el agente es el propio: autoseleccionar.
+  useEffect(() => {
+    if (!isAdmin) setSel(current);
+  }, [isAdmin, current]);
 
   return (
     <div>
@@ -42,7 +41,7 @@ export default function ProbarAgentes() {
       </header>
 
       <div className="ag-cards">
-        {tenants.map((t) => (
+        {visibles.map((t) => (
           <button
             key={t.id}
             className={`ag-card ${sel?.id === t.id ? "active" : ""}`}
@@ -60,13 +59,15 @@ export default function ProbarAgentes() {
             <span className={`ag-tag ${t.tipo}`}>{t.tipo === "interno" ? "Interno" : "Cliente"}</span>
           </button>
         ))}
-        <button className="ag-card ag-card-new" onClick={() => setCreando(true)}>
-          <div className="ag-avatar ag-avatar-new">+</div>
-          <div className="ag-info">
-            <div className="ag-name">Nuevo agente</div>
-            <div className="ag-biz">Onboardea un cliente en minutos</div>
-          </div>
-        </button>
+        {isAdmin && (
+          <button className="ag-card ag-card-new" onClick={() => setCreando(true)}>
+            <div className="ag-avatar ag-avatar-new">+</div>
+            <div className="ag-info">
+              <div className="ag-name">Nuevo agente</div>
+              <div className="ag-biz">Onboardea un cliente en minutos</div>
+            </div>
+          </button>
+        )}
       </div>
 
       {creando && (
@@ -74,7 +75,7 @@ export default function ProbarAgentes() {
           onClose={() => setCreando(false)}
           onCreated={(t) => {
             setCreando(false);
-            cargar();
+            refreshTenants();
             setSel(t);
           }}
         />

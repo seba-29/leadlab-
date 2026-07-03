@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { useAccount, scopedUrl } from "../_account/AccountContext";
 
 type ConvItem = {
   id: string;
@@ -29,8 +30,8 @@ function hace(iso: string): string {
 }
 
 export default function Inbox() {
+  const { scope, isAdmin, tenants } = useAccount();
   const [convs, setConvs] = useState<ConvItem[]>([]);
-  const [tenants, setTenants] = useState<{ id: string; nombre: string }[]>([]);
   const [filtro, setFiltro] = useState("");
   const [selId, setSelId] = useState<string | null>(null);
   const [mensajes, setMensajes] = useState<Mensaje[]>([]);
@@ -39,8 +40,8 @@ export default function Inbox() {
   const [enviando, setEnviando] = useState(false);
   const endRef = useRef<HTMLDivElement>(null);
 
-  async function cargarLista(f = filtro) {
-    const d = await fetch(`/api/conversaciones${f ? `?tenantId=${f}` : ""}`).then((r) => r.json());
+  async function cargarLista(tid: string | null = isAdmin ? filtro || null : scope) {
+    const d = await fetch(scopedUrl("/api/conversaciones", tid)).then((r) => r.json());
     setConvs(d.conversaciones ?? []);
   }
 
@@ -53,15 +54,8 @@ export default function Inbox() {
   }
 
   useEffect(() => {
-    fetch("/api/tenants")
-      .then((r) => r.json())
-      .then((d) => setTenants(d.tenants ?? []))
-      .catch(() => {});
-  }, []);
-
-  useEffect(() => {
-    cargarLista(filtro);
-  }, [filtro]); // eslint-disable-line react-hooks/exhaustive-deps
+    cargarLista();
+  }, [filtro, scope]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!selId) return;
@@ -101,20 +95,23 @@ export default function Inbox() {
     <div>
       <header className="con-head">
         <div>
-          <h1 className="con-title">Inbox</h1>
+          <h1 className="con-title">{isAdmin ? "Inbox" : "Conversaciones"}</h1>
           <p className="con-sub">
-            Todas las conversaciones de todos tus clientes. Toma una conversación para pausar el bot y
-            responder tú.
+            {isAdmin
+              ? "Todas las conversaciones de todos tus clientes. Toma una para pausar el bot y responder tú."
+              : "Tus conversaciones. Toma una para pausar el agente y responder tú."}
           </p>
         </div>
-        <select className="con-select" value={filtro} onChange={(e) => setFiltro(e.target.value)}>
-          <option value="">Todos los clientes</option>
-          {tenants.map((t) => (
-            <option key={t.id} value={t.id}>
-              {t.nombre}
-            </option>
-          ))}
-        </select>
+        {isAdmin && (
+          <select className="con-select" value={filtro} onChange={(e) => setFiltro(e.target.value)}>
+            <option value="">Todos los clientes</option>
+            {tenants.map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.nombre}
+              </option>
+            ))}
+          </select>
+        )}
       </header>
 
       <div className="ib-grid">
@@ -140,7 +137,7 @@ export default function Inbox() {
                 </div>
                 <div className="ib-item-meta">
                   <span className="ib-canal">{c.canal === "whatsapp" ? "WhatsApp" : "Playground"}</span>
-                  <span className="ib-tenant">{c.tenantNombre}</span>
+                  {isAdmin && <span className="ib-tenant">{c.tenantNombre}</span>}
                   <span className={`estado-pill estado-${c.estado}`}>
                     {c.estado === "bot" ? "🤖 agente" : c.estado === "humano" ? "👤 humano" : "cerrada"}
                   </span>

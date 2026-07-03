@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useAccount, scopedUrl } from "./_account/AccountContext";
 
 type Resumen = {
   conversaciones7d: number;
@@ -40,14 +41,16 @@ const CLP = new Intl.NumberFormat("es-CL", {
 });
 
 export default function Dashboard() {
+  const { scope, isAdmin, current } = useAccount();
   const [data, setData] = useState<Resumen | null>(null);
 
   useEffect(() => {
-    fetch("/api/resumen")
+    setData(null);
+    fetch(scopedUrl("/api/resumen", scope))
       .then((r) => r.json())
       .then(setData)
       .catch(() => {});
-  }, []);
+  }, [scope]);
 
   if (!data) return <div className="con-loading">Cargando métricas…</div>;
 
@@ -55,8 +58,12 @@ export default function Dashboard() {
     <div>
       <header className="con-head">
         <div>
-          <h1 className="con-title">Dashboard</h1>
-          <p className="con-sub">Los últimos 7 días de tu operación, de un vistazo.</p>
+          <h1 className="con-title">{isAdmin ? "Dashboard" : `Panel de ${current?.nombre ?? ""}`}</h1>
+          <p className="con-sub">
+            {isAdmin
+              ? "Los últimos 7 días de toda tu operación, de un vistazo."
+              : `Los últimos 7 días de ${current?.nombre ?? "tu negocio"}, de un vistazo.`}
+          </p>
         </div>
       </header>
 

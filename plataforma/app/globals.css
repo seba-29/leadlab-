@@ -1473,3 +1473,216 @@ body {
   background: var(--glass);
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.18);
 }
+
+/* ---- Grupos del nav (secciones etiquetadas) ---- */
+.con-nav-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 14px;
+}
+.con-nav-group:first-of-type {
+  margin-top: 0;
+}
+.con-nav-group-label {
+  font-size: 10px;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--faint);
+  font-weight: 700;
+  padding: 4px 12px 2px;
+}
+
+/* ---- Switcher de cuenta (pie del sidebar) ---- */
+.con-switch {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.con-switch-select {
+  width: 100%;
+  font-size: 12px;
+  padding: 8px 10px;
+}
+.con-user.is-client .con-user-avatar {
+  color: #1a0d06;
+}
+
+/* ---- Banner "viendo como X" ---- */
+.con-viewas {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  background: var(--glass);
+  border: 1px solid var(--glass-brd);
+  border-left: 3px solid var(--t-orange);
+  border-radius: 12px;
+  padding: 10px 14px;
+  margin-bottom: 18px;
+  font-size: 12.5px;
+  color: var(--muted);
+  backdrop-filter: blur(14px);
+}
+.con-viewas strong {
+  color: var(--text);
+}
+
+/* ---- Ficha del agente (cara cliente de "Cerebro") ---- */
+.agente-ficha {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.agente-cabecera {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 18px 20px;
+}
+.agente-cab-avatar {
+  width: 52px;
+  height: 52px;
+  border-radius: 15px;
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+  font-size: 22px;
+  color: #1a0d06;
+  flex-shrink: 0;
+}
+.agente-cab-nombre {
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.3px;
+}
+.agente-cab-rubro {
+  font-size: 12.5px;
+  color: var(--muted);
+  margin-top: 2px;
+}
+.agente-frase {
+  padding: 16px 20px;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--text);
+}
+.agente-frase .q {
+  color: var(--t-orange);
+  font-weight: 600;
+}
+.agente-block {
+  padding: 16px 20px;
+}
+.agente-block-title {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--faint);
+  margin-bottom: 12px;
+}
+.agente-kv {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.agente-kv-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 13px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--line);
+}
+.agente-kv-row:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+.agente-kv-row .k {
+  color: var(--muted);
+}
+.agente-kv-row .v {
+  font-weight: 600;
+  text-align: right;
+}
+.agente-faq {
+  font-size: 13px;
+  color: var(--muted);
+  line-height: 1.55;
+}
+.agente-faq details {
+  border-bottom: 1px solid var(--line);
+  padding: 8px 0;
+}
+.agente-faq summary {
+  cursor: pointer;
+  color: var(--text);
+  font-weight: 500;
+}
+.agente-faq p {
+  margin-top: 6px;
+}
+.agente-caps {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 12px;
+}
+.agente-cap {
+  background: var(--card);
+  border: 1px solid var(--glass-brd);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+}
+.agente-cap-head {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-bottom: 8px;
+}
+.agente-cap-icon {
+  width: 20px;
+  height: 20px;
+  color: var(--t-orange);
+}
+.agente-cap-icon svg {
+  width: 100%;
+  height: 100%;
+}
+.agente-cap-name {
+  font-size: 13.5px;
+  font-weight: 600;
+}
+.agente-cap-desc {
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+.agente-salud {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 4px;
+}
+.agente-salud .pill {
+  background: var(--chip);
+  color: var(--muted);
+}
+.agente-nota {
+  font-size: 12px;
+  color: var(--faint);
+  line-height: 1.6;
+  padding: 0 20px 4px;
+}
+
+/* Nav responsive: aplanar grupos en la barra horizontal móvil */
+@media (max-width: 760px) {
+  .con-nav-group {
+    display: contents;
+  }
+  .con-nav-group-label {
+    display: none;
+  }
+}

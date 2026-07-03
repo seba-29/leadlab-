@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useAccount } from "../_account/AccountContext";
 
 type Cliente = {
   id: string;
@@ -38,14 +39,33 @@ const USD = new Intl.NumberFormat("en-US", {
 const NUM = new Intl.NumberFormat("es-CL");
 
 export default function Clientes() {
+  const { isAdmin } = useAccount();
   const [data, setData] = useState<Data | null>(null);
 
   useEffect(() => {
+    if (!isAdmin) return;
     fetch("/api/admin/clientes")
       .then((r) => r.json())
       .then(setData)
       .catch(() => {});
-  }, []);
+  }, [isAdmin]);
+
+  if (!isAdmin) {
+    return (
+      <div>
+        <header className="con-head">
+          <div>
+            <h1 className="con-title">Solo administración</h1>
+            <p className="con-sub">Esta sección pertenece al panel de Lead Lab.</p>
+          </div>
+        </header>
+        <div className="panel ag-empty">
+          🔒 Volvé a la cuenta <strong>Admin</strong> (arriba, en el switcher del sidebar) para ver
+          clientes, consumo y márgenes.
+        </div>
+      </div>
+    );
+  }
 
   if (!data) return <div className="con-loading">Cargando clientes…</div>;
 
