@@ -85,12 +85,15 @@ create table if not exists derivaciones (
 );
 
 create table if not exists usage_events (
-  id        bigint generated always as identity primary key,
-  tenant_id text not null references tenants(id) on delete cascade,
-  tipo      text not null check (tipo in ('claude_tokens_in','claude_tokens_out','wa_template')),
-  cantidad  numeric not null,
-  costo_usd numeric,
-  creado    timestamptz not null default now()
+  id                    text primary key default ('uso_' || replace(gen_random_uuid()::text,'-','')),
+  tenant_id             text not null references tenants(id) on delete cascade,
+  model                 text not null,
+  tokens_in             numeric not null default 0,
+  tokens_in_cache_read  numeric not null default 0,
+  tokens_in_cache_write numeric not null default 0,
+  tokens_out            numeric not null default 0,
+  costo_usd             numeric not null default 0,
+  creado                timestamptz not null default now()
 );
 
 -- ---------- índices ----------
