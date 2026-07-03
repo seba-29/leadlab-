@@ -17,7 +17,21 @@ type Resumen = {
     etapa: string;
     valorEstimado?: number;
   }[];
+  atencion: { id: string; motivo: string; resumen: string; creado: string }[];
+  proximasCitas: { id: string; fechaHora: string; contacto: string }[];
 };
+
+function fmtCita(fechaHora: string): string {
+  const t = new Date(fechaHora);
+  if (isNaN(t.getTime())) return fechaHora; // texto libre creado por el agente
+  return t.toLocaleDateString("es-CL", {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
 
 const CLP = new Intl.NumberFormat("es-CL", {
   style: "currency",
@@ -77,6 +91,45 @@ export default function Dashboard() {
               </div>
             ))}
           </div>
+        </section>
+      </div>
+
+      <div className="dash-grid dash-grid-2">
+        <section className="panel dash-side">
+          <div className="panel-title">🙋 Requiere atención humana</div>
+          {data.atencion.length === 0 ? (
+            <p className="empty">Sin derivaciones pendientes. El agente tiene todo bajo control. ✨</p>
+          ) : (
+            <div className="mini-leads">
+              {data.atencion.map((a) => (
+                <a key={a.id} className="mini-lead atencion-item" href="/consola/inbox">
+                  <div>
+                    <div className="mini-lead-name">{a.motivo}</div>
+                    {a.resumen && <div className="mini-lead-int">{a.resumen}</div>}
+                  </div>
+                  <span className="drawer-link">Ir al inbox →</span>
+                </a>
+              ))}
+            </div>
+          )}
+        </section>
+
+        <section className="panel dash-side">
+          <div className="panel-title">📅 Próximas citas</div>
+          {data.proximasCitas.length === 0 ? (
+            <p className="empty">Sin citas próximas agendadas.</p>
+          ) : (
+            <div className="mini-leads">
+              {data.proximasCitas.map((c) => (
+                <div key={c.id} className="mini-lead">
+                  <div>
+                    <div className="mini-lead-name">{fmtCita(c.fechaHora)}</div>
+                    {c.contacto && <div className="mini-lead-int">{c.contacto}</div>}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </section>
       </div>
     </div>

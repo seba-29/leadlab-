@@ -540,6 +540,55 @@ export async function getTenant(tid: string): Promise<Tenant | undefined> {
   return getDb().tenants.find((t) => t.id === tid);
 }
 
+function slugify(s: string): string {
+  const base = s
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 24);
+  const d = getDb();
+  let candidate = base || "agente";
+  let n = 2;
+  while (d.tenants.some((t) => t.id === candidate)) {
+    candidate = `${base}-${n++}`;
+  }
+  return candidate;
+}
+
+export async function crearTenant(input: {
+  nombre: string;
+  agente: string;
+  rubro: string;
+  color: string;
+  descripcion?: string;
+  horario?: string;
+  tono?: string;
+}): Promise<Tenant> {
+  const t: Tenant = {
+    id: slugify(input.nombre),
+    nombre: input.nombre,
+    agente: input.agente,
+    rubro: input.rubro,
+    tipo: "cliente",
+    color: input.color || "#5EEAD4",
+    model: "claude-opus-4-8",
+    cerebro: {
+      descripcion: input.descripcion || `${input.nombre} es un negocio del rubro ${input.rubro}.`,
+      tono: input.tono || "Cálido, cercano y profesional. Mensajes cortos estilo WhatsApp.",
+      horario: input.horario || "Lunes a viernes 9:00–19:00",
+      servicios: [],
+      faq: [],
+      reglas:
+        "Nunca inventar precios ni disponibilidad. Ante dudas complejas o reclamos, derivar a un humano.",
+    },
+  };
+  getDb().tenants.push(t);
+  save();
+  return t;
+}
+
 export async function updateCerebro(tid: string, cerebro: Cerebro): Promise<Tenant | undefined> {
   const t = getDb().tenants.find((x) => x.id === tid);
   if (t) {
@@ -638,6 +687,19 @@ export async function moverLead(lid: string, etapa: Etapa): Promise<Lead | undef
   const l = getDb().leads.find((x) => x.id === lid);
   if (l) {
     l.etapa = etapa;
+    l.actualizado = ahora();
+    save();
+  }
+  return l;
+}
+
+export async function actualizarLead(
+  lid: string,
+  patch: Partial<Pick<Lead, "nombre" | "negocio" | "telefono" | "interes" | "etapa" | "valorEstimado" | "notas">>,
+): Promise<Lead | undefined> {
+  const l = getDb().leads.find((x) => x.id === lid);
+  if (l) {
+    Object.assign(l, patch);
     l.actualizado = ahora();
     save();
   }

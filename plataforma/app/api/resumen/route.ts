@@ -48,5 +48,25 @@ export async function GET() {
     porDia,
     porEtapa,
     ultimosLeads: leads.slice(0, 6),
+    atencion: [...derivaciones]
+      .sort((a, b) => b.creado.localeCompare(a.creado))
+      .slice(0, 5)
+      .map((d) => ({
+        id: d.id,
+        motivo: d.motivo,
+        resumen: d.resumen ?? "",
+        conversacionId: d.conversacionId ?? null,
+        creado: d.creado,
+      })),
+    // fechaHora puede ser ISO (seed) o texto libre (creada por el agente): las de
+    // texto libre se muestran igual, las ISO pasadas se ocultan
+    proximasCitas: citas
+      .filter((c) => {
+        const t = new Date(c.fechaHora).getTime();
+        return isNaN(t) || t >= Date.now();
+      })
+      .sort((a, b) => a.fechaHora.localeCompare(b.fechaHora))
+      .slice(0, 5)
+      .map((c) => ({ id: c.id, fechaHora: c.fechaHora, contacto: c.contacto ?? "" })),
   });
 }

@@ -13,16 +13,21 @@ type Tenant = {
 type Msg = { role: "user" | "assistant"; content: string };
 type LeadItem = { nombre: string; interes?: string; etapa: string };
 
+const COLORES = ["#5EEAD4", "#F472B6", "#93C5FD", "#FFC93F", "#A78BFA", "#FF6B2C", "#C6F24E"];
+
 export default function ProbarAgentes() {
   const [tenants, setTenants] = useState<Tenant[]>([]);
   const [sel, setSel] = useState<Tenant | null>(null);
+  const [creando, setCreando] = useState(false);
 
-  useEffect(() => {
+  function cargar() {
     fetch("/api/tenants")
       .then((r) => r.json())
       .then((d) => setTenants(d.tenants ?? []))
       .catch(() => {});
-  }, []);
+  }
+
+  useEffect(cargar, []);
 
   return (
     <div>
@@ -55,22 +60,153 @@ export default function ProbarAgentes() {
             <span className={`ag-tag ${t.tipo}`}>{t.tipo === "interno" ? "Interno" : "Cliente"}</span>
           </button>
         ))}
-        <div className="ag-card ag-card-new" title="Disponible en la siguiente fase">
+        <button className="ag-card ag-card-new" onClick={() => setCreando(true)}>
           <div className="ag-avatar ag-avatar-new">+</div>
           <div className="ag-info">
             <div className="ag-name">Nuevo agente</div>
-            <div className="ag-biz">Se crea al onboardear un cliente</div>
+            <div className="ag-biz">Onboardea un cliente en minutos</div>
           </div>
-        </div>
+        </button>
       </div>
+
+      {creando && (
+        <NuevoAgente
+          onClose={() => setCreando(false)}
+          onCreated={(t) => {
+            setCreando(false);
+            cargar();
+            setSel(t);
+          }}
+        />
+      )}
 
       {sel ? (
         <Tester key={sel.id} tenant={sel} />
       ) : (
         <div className="panel ag-empty">
-          <p>👆 Elige un agente para probarlo en vivo.</p>
+          <p>👆 Elige un agente para probarlo en vivo, o crea uno nuevo.</p>
         </div>
       )}
+    </div>
+  );
+}
+
+function NuevoAgente({
+  onClose,
+  onCreated,
+}: {
+  onClose: () => void;
+  onCreated: (t: Tenant) => void;
+}) {
+  const [form, setForm] = useState({
+    nombre: "",
+    agente: "",
+    rubro: "",
+    color: COLORES[0],
+    descripcion: "",
+    horario: "",
+  });
+  const [error, setError] = useState("");
+  const [guardando, setGuardando] = useState(false);
+
+  async function crear() {
+    if (!form.nombre.trim() || !form.agente.trim() || !form.rubro.trim()) {
+      setError("Completa al menos negocio, nombre del agente y rubro.");
+      return;
+    }
+    setGuardando(true);
+    setError("");
+    const d = await fetch("/api/tenants", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(form),
+    }).then((r) => r.json());
+    setGuardando(false);
+    if (d.error) {
+      setError(d.error);
+      return;
+    }
+    onCreated(d.tenant);
+  }
+
+  return (
+    <div className="modal-bg" onClick={onClose}>
+      <div className="modal panel" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-head">
+          <h2>Nuevo agente</h2>
+          <button className="cb-del" onClick={onClose}>
+            ×
+          </button>
+        </div>
+        <div className="cb-row">
+          <label className="field">
+            <span>Negocio *</span>
+            <input
+              placeholder="Ej: Clínica Dental Sonrisa"
+              value={form.nombre}
+              onChange={(e) => setForm({ ...form, nombre: e.target.value })}
+            />
+          </label>
+          <label className="field">
+            <span>Nombre del agente *</span>
+            <input
+              placeholder="Ej: Valentina"
+              value={form.agente}
+              onChange={(e) => setForm({ ...form, agente: e.target.value })}
+            />
+          </label>
+        </div>
+        <div className="cb-row">
+          <label className="field">
+            <span>Rubro *</span>
+            <input
+              placeholder="Ej: Clínica dental"
+              value={form.rubro}
+              onChange={(e) => setForm({ ...form, rubro: e.target.value })}
+            />
+          </label>
+          <label className="field">
+            <span>Horario (opcional)</span>
+            <input
+              placeholder="Ej: Lun a Vie 9:00–19:00"
+              value={form.horario}
+              onChange={(e) => setForm({ ...form, horario: e.target.value })}
+            />
+          </label>
+        </div>
+        <label className="field">
+          <span>Descripción breve del negocio (opcional)</span>
+          <textarea
+            rows={2}
+            placeholder="Qué hace, dónde está, qué lo distingue…"
+            value={form.descripcion}
+            onChange={(e) => setForm({ ...form, descripcion: e.target.value })}
+          />
+        </label>
+        <div className="field">
+          <span>Color del agente</span>
+          <div className="swatches">
+            {COLORES.map((c) => (
+              <button
+                key={c}
+                className={`swatch ${form.color === c ? "active" : ""}`}
+                style={{ background: c }}
+                onClick={() => setForm({ ...form, color: c })}
+                aria-label={`Color ${c}`}
+              />
+            ))}
+          </div>
+        </div>
+        {error && <div className="modal-error">⚠️ {error}</div>}
+        <div className="cb-actions">
+          <button className="btn-primary-lg" onClick={crear} disabled={guardando}>
+            {guardando ? "Creando…" : "Crear agente"}
+          </button>
+          <span className="modal-hint">
+            Después complétale servicios y precios en la pestaña <strong>Cerebro</strong>.
+          </span>
+        </div>
+      </div>
     </div>
   );
 }

@@ -30,6 +30,8 @@ function hace(iso: string): string {
 
 export default function Inbox() {
   const [convs, setConvs] = useState<ConvItem[]>([]);
+  const [tenants, setTenants] = useState<{ id: string; nombre: string }[]>([]);
+  const [filtro, setFiltro] = useState("");
   const [selId, setSelId] = useState<string | null>(null);
   const [mensajes, setMensajes] = useState<Mensaje[]>([]);
   const [conv, setConv] = useState<ConvItem | null>(null);
@@ -37,8 +39,8 @@ export default function Inbox() {
   const [enviando, setEnviando] = useState(false);
   const endRef = useRef<HTMLDivElement>(null);
 
-  async function cargarLista() {
-    const d = await fetch("/api/conversaciones").then((r) => r.json());
+  async function cargarLista(f = filtro) {
+    const d = await fetch(`/api/conversaciones${f ? `?tenantId=${f}` : ""}`).then((r) => r.json());
     setConvs(d.conversaciones ?? []);
   }
 
@@ -51,8 +53,15 @@ export default function Inbox() {
   }
 
   useEffect(() => {
-    cargarLista();
+    fetch("/api/tenants")
+      .then((r) => r.json())
+      .then((d) => setTenants(d.tenants ?? []))
+      .catch(() => {});
   }, []);
+
+  useEffect(() => {
+    cargarLista(filtro);
+  }, [filtro]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!selId) return;
@@ -98,6 +107,14 @@ export default function Inbox() {
             responder tú.
           </p>
         </div>
+        <select className="con-select" value={filtro} onChange={(e) => setFiltro(e.target.value)}>
+          <option value="">Todos los clientes</option>
+          {tenants.map((t) => (
+            <option key={t.id} value={t.id}>
+              {t.nombre}
+            </option>
+          ))}
+        </select>
       </header>
 
       <div className="ib-grid">
