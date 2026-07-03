@@ -61,6 +61,9 @@ plataforma/
 - **Regla de producto en el Inbox:** si un humano responde, el bot se pausa en esa conversación (estado `humano`) hasta que se le devuelve el control.
 - **Prompt caching:** el prompt del sistema de cada tenant se marca con `cache_control` para pagar ~10% del costo en mensajes siguientes.
 
-## Siguiente (Fase 3)
+## Fase 3 (pre-cableada, lista para enchufar)
 
-Canal real: WhatsApp Cloud API (webhook → agente → respuesta), Supabase (Postgres + RLS + Realtime) y las conversaciones reales cayendo en vivo a este mismo Inbox.
+- **Canal WhatsApp ya programado**: `app/api/canales/whatsapp/route.ts` implementa el webhook completo de Meta Cloud API — verificación (`hub.challenge`), validación de firma (`X-Hub-Signature-256`), dedupe de reintentos, debounce de ráfagas (6 s), resolución de tenant por número, pausa por humano, respuesta vía Graph API. **Activarlo = pegar 4 variables en `.env.local`** (ver `.env.example`) y apuntar el webhook de Meta a `/api/canales/whatsapp`.
+- **Esquema Supabase listo**: `supabase/schema.sql` — tablas espejo del store, RLS multi-tenant (el dueño ve solo su negocio, el equipo Lead Lab ve todo), índices y notas de Realtime. Se aplica pegándolo en el SQL Editor de Supabase.
+
+Lo que falta de Fase 3: crear el proyecto Supabase, escribir el adaptador (`lib/store.ts` ya expone firmas async compatibles) y el desbloqueo de Meta.
