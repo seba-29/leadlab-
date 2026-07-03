@@ -11,7 +11,35 @@ import {
   crearCita,
   crearDerivacion,
   setEstadoConversacion,
+  registrarUso,
 } from "./store";
+
+// Precios USD por millón de tokens (in / out). Cache read = 0.1×in, cache write = 1.25×in.
+const PRECIOS: Record<string, { in: number; out: number }> = {
+  "claude-opus-4-8": { in: 5, out: 25 },
+  "claude-sonnet-5": { in: 3, out: 15 },
+  "claude-sonnet-4-6": { in: 3, out: 15 },
+  "claude-haiku-4-5": { in: 1, out: 5 },
+};
+
+async function contabilizar(tenantId: string, model: string, usage: Anthropic.Usage) {
+  const p = PRECIOS[model] ?? PRECIOS["claude-opus-4-8"];
+  const tIn = usage.input_tokens ?? 0;
+  const tCacheRead = usage.cache_read_input_tokens ?? 0;
+  const tCacheWrite = usage.cache_creation_input_tokens ?? 0;
+  const tOut = usage.output_tokens ?? 0;
+  const costoUsd =
+    (tIn * p.in + tCacheRead * p.in * 0.1 + tCacheWrite * p.in * 1.25 + tOut * p.out) / 1_000_000;
+  await registrarUso({
+    tenantId,
+    model,
+    tokensIn: tIn,
+    tokensInCacheRead: tCacheRead,
+    tokensInCacheWrite: tCacheWrite,
+    tokensOut: tOut,
+    costoUsd,
+  });
+}
 
 export type ChatMessage = { role: "user" | "assistant"; content: string };
 export type AgentResult = { reply: string; events: string[] };
@@ -190,6 +218,8 @@ export async function runAgent(
       tools,
       messages,
     });
+
+    contabilizar(tenant.id, tenant.model || DEFAULT_MODEL, res.usage).catch(() => {});
 
     const textParts: string[] = [];
     const toolResults: Anthropic.ToolResultBlockParam[] = [];

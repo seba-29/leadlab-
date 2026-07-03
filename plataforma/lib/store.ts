@@ -87,6 +87,18 @@ export type Derivacion = {
   creado: string;
 };
 
+export type UsoEvento = {
+  id: string;
+  tenantId: string;
+  model: string;
+  tokensIn: number;
+  tokensInCacheRead: number;
+  tokensInCacheWrite: number;
+  tokensOut: number;
+  costoUsd: number;
+  creado: string;
+};
+
 type DB = {
   tenants: Tenant[];
   conversaciones: Conversacion[];
@@ -94,6 +106,7 @@ type DB = {
   leads: Lead[];
   citas: Cita[];
   derivaciones: Derivacion[];
+  usos: UsoEvento[];
 };
 
 // ---------- infraestructura ----------
@@ -150,6 +163,7 @@ function getDb(): DB {
   try {
     if (fs.existsSync(DATA_FILE)) {
       db = JSON.parse(fs.readFileSync(DATA_FILE, "utf8")) as DB;
+      if (!db.usos) db.usos = [];
       return db;
     }
   } catch {
@@ -527,6 +541,7 @@ function seed(): DB {
     leads,
     citas,
     derivaciones,
+    usos: [],
   };
 }
 
@@ -728,4 +743,14 @@ export async function crearDerivacion(input: Omit<Derivacion, "id" | "creado">):
 export async function listDerivaciones(tenantId?: string): Promise<Derivacion[]> {
   const all = getDb().derivaciones;
   return tenantId ? all.filter((d) => d.tenantId === tenantId) : all;
+}
+
+export async function registrarUso(input: Omit<UsoEvento, "id" | "creado">): Promise<void> {
+  getDb().usos.push({ id: id("uso"), creado: ahora(), ...input });
+  save();
+}
+
+export async function listUsos(tenantId?: string): Promise<UsoEvento[]> {
+  const all = getDb().usos;
+  return tenantId ? all.filter((u) => u.tenantId === tenantId) : all;
 }

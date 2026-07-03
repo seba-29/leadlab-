@@ -1323,3 +1323,66 @@ body {
 .atencion-item:hover .mini-lead-name {
   color: var(--orange);
 }
+
+/* ---- Tabla admin (Clientes) ---- */
+.tabla-wrap {
+  padding: 6px 4px;
+  overflow-x: auto;
+}
+.tabla {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12.5px;
+  min-width: 880px;
+}
+.tabla th {
+  text-align: left;
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.7px;
+  color: var(--faint);
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--glass-brd);
+  white-space: nowrap;
+}
+.tabla td {
+  padding: 12px 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  white-space: nowrap;
+  vertical-align: middle;
+}
+.tabla tr:last-child td {
+  border-bottom: none;
+}
+.tabla tbody tr:hover {
+  background: rgba(255, 255, 255, 0.025);
+}
+.tabla .kb-dot {
+  display: inline-block;
+  margin-right: 7px;
+}
+.tabla-sub {
+  font-size: 10px;
+  color: var(--faint);
+  margin-top: 2px;
+}
+.tabla-tag {
+  margin-left: 8px;
+}
+.tabla-costo {
+  color: var(--lime);
+  font-weight: 600;
+}
+.clientes-nota {
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 14px;
+  line-height: 1.6;
+}
+.clientes-nota code {
+  font-size: 11px;
+  background: rgba(255, 255, 255, 0.07);
+  border-radius: 5px;
+  padding: 1px 6px;
+}
