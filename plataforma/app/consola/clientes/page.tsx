@@ -20,10 +20,20 @@ type Cliente = {
   tokensOut: number;
   costoUsd: number;
   planClp: number;
+  planUsd: number;
+  margenUsd: number;
+  margenPct: number | null;
 };
 type Data = {
   clientes: Cliente[];
-  totales: { clientes: number; costoUsd: number; llamadasIa: number; mrrClp: number };
+  totales: {
+    clientes: number;
+    costoUsd: number;
+    llamadasIa: number;
+    mrrClp: number;
+    margenUsd: number;
+    margenPct: number | null;
+  };
 };
 
 const CLP = new Intl.NumberFormat("es-CL", {
@@ -82,10 +92,19 @@ export default function Clientes() {
       </header>
 
       <div className="tiles">
-        <Tile label="Clientes activos" value={String(data.totales.clientes)} hint="tenants tipo cliente" />
         <Tile label="MRR de referencia" value={CLP.format(data.totales.mrrClp)} hint="según plan por cliente" accent />
+        <Tile
+          label="Margen mensual"
+          value={USD.format(data.totales.margenUsd)}
+          hint="cobras − gastas en IA"
+        />
+        <Tile
+          label="Margen %"
+          value={data.totales.margenPct != null ? `${Math.round(data.totales.margenPct * 100)}%` : "—"}
+          hint="de lo que cobras"
+        />
         <Tile label="Costo IA acumulado" value={USD.format(data.totales.costoUsd)} hint="todas las llamadas a Claude" />
-        <Tile label="Llamadas al agente" value={NUM.format(data.totales.llamadasIa)} hint="requests a la API" />
+        <Tile label="Clientes activos" value={String(data.totales.clientes)} hint="tenants tipo cliente" />
       </div>
 
       <section className="panel tabla-wrap">
@@ -102,6 +121,7 @@ export default function Clientes() {
               <th>Tokens in / out</th>
               <th>Costo IA</th>
               <th>Plan</th>
+              <th>Margen</th>
             </tr>
           </thead>
           <tbody>
@@ -125,6 +145,12 @@ export default function Clientes() {
                 </td>
                 <td className="tabla-costo">{USD.format(c.costoUsd)}</td>
                 <td>{c.planClp ? CLP.format(c.planClp) + "/mes" : "—"}</td>
+                <td className={c.tipo === "interno" ? "" : c.margenUsd >= 0 ? "margen-pos" : "margen-neg"}>
+                  {c.tipo === "interno" ? "—" : USD.format(c.margenUsd)}
+                  {c.margenPct != null && (
+                    <div className="tabla-sub">{Math.round(c.margenPct * 100)}% margen</div>
+                  )}
+                </td>
               </tr>
             ))}
           </tbody>

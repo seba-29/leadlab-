@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useAccount } from "../_account/AccountContext";
+import { planClp } from "@/lib/pricing";
 
 type Cerebro = {
   descripcion: string;
@@ -27,7 +28,6 @@ const CLP = new Intl.NumberFormat("es-CL", {
   currency: "CLP",
   maximumFractionDigits: 0,
 });
-const PLAN_CLP = 149000; // referencia del plan cliente
 
 export default function Configuracion() {
   const { scope, current } = useAccount();
@@ -190,7 +190,7 @@ export default function Configuracion() {
               <div className="plan-sub">Agente IA 24/7 + consola + soporte</div>
             </div>
             <div className="plan-precio">
-              {tenant.tipo === "interno" ? "—" : `${CLP.format(PLAN_CLP)}/mes`}
+              {tenant.tipo === "interno" ? "—" : `${CLP.format(planClp(tenant.tipo))}/mes`}
             </div>
           </div>
           <a

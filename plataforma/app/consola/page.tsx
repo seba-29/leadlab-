@@ -40,19 +40,26 @@ const CLP = new Intl.NumberFormat("es-CL", {
   currency: "CLP",
   maximumFractionDigits: 0,
 });
+const USD = new Intl.NumberFormat("en-US", {
+  style: "currency",
+  currency: "USD",
+  maximumFractionDigits: 2,
+});
 
 export default function Dashboard() {
   const { scope, isAdmin, current } = useAccount();
   const [data, setData] = useState<Resumen | null>(null);
 
   useEffect(() => {
+    if (isAdmin) return; // el admin ve la Vista Global
     setData(null);
     fetch(scopedUrl("/api/resumen", scope))
       .then((r) => r.json())
       .then(setData)
       .catch(() => {});
-  }, [scope]);
+  }, [scope, isAdmin]);
 
+  if (isAdmin) return <VistaGlobal />;
   if (!data) return <div className="con-loading">Cargando métricas…</div>;
 
   return (
@@ -228,6 +235,149 @@ function BarChart({ data }: { data: { etiqueta: string; n: number }[] }) {
               </text>
             )}
           </g>
+        );
+      })}
+    </svg>
+  );
+}
+
+// ============================================================
+// Vista Global — cara ADMIN de /consola (super-consola del dueño)
+// ============================================================
+type ClienteGlobal = {
+  id: string;
+  nombre: string;
+  agente: string;
+  color: string;
+  rubro: string;
+  tipo: "interno" | "cliente";
+  conv7d: number;
+  leads7d: number;
+  ganados: number;
+  derivacionesPend: number;
+  costoUsd: number;
+  planClp: number;
+  margenPct: number | null;
+  salud: "verde" | "ambar" | "rojo";
+  spark: number[];
+};
+type GlobalData = {
+  totales: {
+    mrrClp: number;
+    nClientes: number;
+    agentesActivos: number;
+    leadsTotales: number;
+    ganadosTotales: number;
+    derivacionesPendientes: number;
+    margenUsdMes: number;
+    margenPct: number | null;
+  };
+  clientes: ClienteGlobal[];
+};
+
+function VistaGlobal() {
+  const { entrarComo } = useAccount();
+  const [g, setG] = useState<GlobalData | null>(null);
+
+  useEffect(() => {
+    fetch("/api/admin/global")
+      .then((r) => r.json())
+      .then(setG)
+      .catch(() => {});
+  }, []);
+
+  if (!g) return <div className="con-loading">Cargando vista global…</div>;
+  const t = g.totales;
+
+  return (
+    <div>
+      <header className="con-head">
+        <div>
+          <h1 className="con-title">Vista global</h1>
+          <p className="con-sub">El pulso de toda tu plataforma, en vivo.</p>
+        </div>
+      </header>
+
+      <div className="tiles">
+        <Tile label="MRR de referencia" value={CLP.format(t.mrrClp)} hint="ingreso mensual recurrente" accent />
+        <Tile label="Margen mensual" value={USD.format(t.margenUsdMes)} hint="cobras − gastas en IA" />
+        <Tile
+          label="Clientes activos"
+          value={String(t.nClientes)}
+          hint={`${t.agentesActivos} agentes con actividad`}
+        />
+        <Tile label="Leads totales" value={String(t.leadsTotales)} hint={`${t.ganadosTotales} ganados`} />
+        <Tile
+          label="Requieren atención"
+          value={String(t.derivacionesPendientes)}
+          hint="derivaciones pendientes"
+        />
+      </div>
+
+      <section className="panel dash-side dash-panel-pad">
+        <div className="panel-title">Salud por cliente · toca para entrar</div>
+        {g.clientes.length === 0 ? (
+          <p className="empty">Aún no hay clientes. Créalos en Subcuentas.</p>
+        ) : (
+          <div className="salud-grid">
+            {g.clientes.map((c) => (
+              <ClienteSaludCard key={c.id} c={c} onEntrar={() => entrarComo(c.id)} />
+            ))}
+          </div>
+        )}
+      </section>
+    </div>
+  );
+}
+
+const SALUD_LABEL: Record<string, string> = { verde: "Sano", ambar: "Atención", rojo: "Riesgo" };
+
+function ClienteSaludCard({ c, onEntrar }: { c: ClienteGlobal; onEntrar: () => void }) {
+  return (
+    <button className="salud-card" onClick={onEntrar}>
+      <div className="salud-top">
+        <span className="kb-dot" style={{ background: c.color }} />
+        <span className="salud-nombre">{c.nombre}</span>
+        <span className={`salud-pill ${c.salud}`}>{SALUD_LABEL[c.salud]}</span>
+      </div>
+      <Sparkline data={c.spark} color={c.color} />
+      <div className="salud-foot">
+        <span className={c.margenPct != null && c.margenPct < 0 ? "margen-neg" : "margen-pos"}>
+          {c.tipo === "interno"
+            ? "usa su producto"
+            : c.margenPct != null
+              ? `margen ${Math.round(c.margenPct * 100)}%`
+              : "—"}
+        </span>
+        <span className="salud-deriv">
+          {c.derivacionesPend > 0 ? `${c.derivacionesPend} deriv.` : `${c.leads7d} leads 7d`}
+        </span>
+      </div>
+    </button>
+  );
+}
+
+function Sparkline({ data, color }: { data: number[]; color: string }) {
+  const w = 200;
+  const h = 34;
+  const gap = 3;
+  const max = Math.max(1, ...data);
+  const bw = w / data.length - gap;
+  return (
+    <svg viewBox={`0 0 ${w} ${h}`} className="spark" preserveAspectRatio="none" aria-hidden>
+      {data.map((n, i) => {
+        const bh = Math.max(n > 0 ? 3 : 1, (n / max) * (h - 4));
+        const x = i * (bw + gap);
+        return (
+          <rect
+            key={i}
+            x={x}
+            y={h - bh}
+            width={bw}
+            height={bh}
+            rx="2"
+            fill={n > 0 ? color : "rgba(150,150,150,0.18)"}
+          />
         );
       })}
     </svg>
