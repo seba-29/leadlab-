@@ -65,6 +65,18 @@ const IconFunnel = (
     <path d="M3 5h18l-7 8v6l-4 2v-8L3 5z" />
   </svg>
 );
+const IconLayers = (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+    <path d="M12 3l9 5-9 5-9-5 9-5z" />
+    <path d="M3 12l9 5 9-5M3 16.5l9 5 9-5" />
+  </svg>
+);
+const IconBuilding = (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+    <rect x="4" y="3" width="16" height="18" rx="1.5" />
+    <path d="M8 7h2M14 7h2M8 11h2M14 11h2M10 21v-3h4v3" />
+  </svg>
+);
 
 type NavItem = { href: string; label: string; icon: ReactNode };
 type NavGroup = { label?: string; items: NavItem[] };
@@ -83,6 +95,7 @@ const NAV_ADMIN: NavGroup[] = [
     items: [
       { href: "/consola/agentes", label: "Probar IA", icon: IconSpark },
       { href: "/consola/cerebro", label: "Cerebro", icon: IconBrain },
+      { href: "/consola/plantillas", label: "Plantillas de rubro", icon: IconLayers },
     ],
   },
   {
@@ -90,6 +103,7 @@ const NAV_ADMIN: NavGroup[] = [
     items: [
       { href: "/consola/clientes", label: "Clientes & consumo", icon: IconPeople },
       { href: "/consola/conversion", label: "Conversión", icon: IconFunnel },
+      { href: "/consola/subcuentas", label: "Subcuentas", icon: IconBuilding },
     ],
   },
 ];
