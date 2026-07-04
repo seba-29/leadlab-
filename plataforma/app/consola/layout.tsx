@@ -88,7 +88,6 @@ const NAV_ADMIN: NavGroup[] = [
     items: [
       { href: "/consola/inbox", label: "Inbox", icon: IconInbox },
       { href: "/consola/leads", label: "Leads", icon: IconLeads },
-      { href: "/consola/agenda", label: "Agenda", icon: IconAgenda },
     ],
   },
   {
@@ -171,7 +170,8 @@ function Sidebar() {
 }
 
 function AccountSwitcher() {
-  const { cuentaActiva, tenants, isAdmin, current, entrarComo, volverAAdmin } = useAccount();
+  const { cuentaActiva, tenants, isAdmin, current, entrarComo, volverAAdmin, logos } = useAccount();
+  const logo = current ? logos[current.id] : undefined;
 
   const ordenados = [...tenants].sort((a, b) => {
     if (a.tipo !== b.tipo) return a.tipo === "interno" ? -1 : 1;
@@ -183,9 +183,16 @@ function AccountSwitcher() {
       <div className={`con-user ${isAdmin ? "" : "is-client"}`}>
         <div
           className="con-user-avatar"
-          style={isAdmin ? undefined : { background: current?.color }}
+          style={!isAdmin && !logo ? { background: current?.color } : undefined}
         >
-          {isAdmin ? "LL" : (current?.agente?.[0] ?? "?")}
+          {isAdmin ? (
+            "LL"
+          ) : logo ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img className="con-logo-img" src={logo} alt="" />
+          ) : (
+            current?.agente?.[0] ?? "?"
+          )}
         </div>
         <div>
           <div className="con-user-name">{isAdmin ? "Lead Lab" : current?.nombre ?? "…"}</div>
@@ -241,12 +248,19 @@ function ThemeToggle() {
 }
 
 function ViewAsBanner() {
-  const { isAdmin, current, volverAAdmin } = useAccount();
+  const { isAdmin, current, volverAAdmin, logos } = useAccount();
   if (isAdmin || !current) return null;
+  const logo = logos[current.id];
   return (
     <div className="con-viewas" style={{ borderLeftColor: current.color }}>
-      <span>
-        👁 Viendo como <strong>{current.nombre}</strong> · {current.agente}
+      <span className="con-viewas-left">
+        {logo ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img className="con-viewas-logo" src={logo} alt="" />
+        ) : (
+          "👁"
+        )}{" "}
+        Viendo como <strong>{current.nombre}</strong> · {current.agente}
       </span>
       <button className="btn-ghost-sm" onClick={volverAAdmin}>
         Volver a admin

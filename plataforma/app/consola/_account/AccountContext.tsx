@@ -44,12 +44,15 @@ type AccountValue = {
   refreshTenants: () => Promise<void>;
   theme: Theme;
   setTheme: (t: Theme) => void;
+  logos: Record<string, string>; // tenantId → dataURL (front por ahora)
+  setLogo: (tenantId: string, dataUrl: string | null) => void;
 };
 
 const Ctx = createContext<AccountValue | null>(null);
 
 const K_CUENTA = "leadlab-cuenta";
 const K_THEME = "leadlab-theme";
+const K_LOGO = "leadlab-logo-";
 
 /** Arma la URL con ?tenantId cuando hay un scope activo (subcuenta). */
 export function scopedUrl(
@@ -68,6 +71,7 @@ export function AccountProvider({ children }: { children: React.ReactNode }) {
   const [cuentaActiva, setCuentaActiva] = useState<string>("admin");
   const [cargando, setCargando] = useState(true);
   const [theme, setThemeState] = useState<Theme>("dark");
+  const [logos, setLogos] = useState<Record<string, string>>({});
 
   const refreshTenants = useCallback(async () => {
     try {
@@ -85,6 +89,15 @@ export function AccountProvider({ children }: { children: React.ReactNode }) {
       if (t === "light" || t === "dark") setThemeState(t);
       const c = localStorage.getItem(K_CUENTA);
       if (c) setCuentaActiva(c);
+      const ls: Record<string, string> = {};
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (k && k.startsWith(K_LOGO)) {
+          const v = localStorage.getItem(k);
+          if (v) ls[k.slice(K_LOGO.length)] = v;
+        }
+      }
+      setLogos(ls);
     } catch {
       /* localStorage no disponible */
     }
@@ -118,6 +131,21 @@ export function AccountProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  const setLogo = useCallback((tenantId: string, dataUrl: string | null) => {
+    setLogos((prev) => {
+      const next = { ...prev };
+      if (dataUrl) next[tenantId] = dataUrl;
+      else delete next[tenantId];
+      return next;
+    });
+    try {
+      if (dataUrl) localStorage.setItem(K_LOGO + tenantId, dataUrl);
+      else localStorage.removeItem(K_LOGO + tenantId);
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
   const isAdmin = cuentaActiva === "admin";
   const scope = isAdmin ? null : cuentaActiva;
   const current = useMemo(
@@ -138,8 +166,10 @@ export function AccountProvider({ children }: { children: React.ReactNode }) {
       refreshTenants,
       theme,
       setTheme,
+      logos,
+      setLogo,
     }),
-    [cuentaActiva, tenants, cargando, isAdmin, scope, current, setCuenta, refreshTenants, theme, setTheme],
+    [cuentaActiva, tenants, cargando, isAdmin, scope, current, setCuenta, refreshTenants, theme, setTheme, logos, setLogo],
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

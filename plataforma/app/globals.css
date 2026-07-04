@@ -2197,3 +2197,195 @@ body {
     min-height: auto;
   }
 }
+
+/* ============================================================
+   CONFIGURACIÓN con pestañas (Mi empresa / Integraciones / Personal)
+   ============================================================ */
+.tabbar {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 18px;
+  border-bottom: 1px solid var(--glass-brd);
+  flex-wrap: wrap;
+}
+.tabbar button {
+  border: none;
+  background: none;
+  color: var(--muted);
+  font-family: inherit;
+  font-size: 13.5px;
+  font-weight: 600;
+  padding: 10px 14px;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  transition: color 0.15s, border-color 0.15s;
+}
+.tabbar button:hover {
+  color: var(--text);
+}
+.tabbar button.on {
+  color: var(--text);
+  border-bottom-color: var(--orange);
+}
+
+/* logo en avatares de cuenta */
+.con-logo-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 10px;
+}
+.con-viewas-left {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.con-viewas-logo {
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  object-fit: cover;
+}
+
+/* Mi empresa: branding + logo */
+.empresa-brand {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  margin-bottom: 18px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid var(--line);
+}
+.empresa-logo {
+  position: relative;
+  width: 72px;
+  height: 72px;
+  border-radius: 16px;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  overflow: hidden;
+  flex-shrink: 0;
+  color: #1a0d06;
+  font-weight: 700;
+  font-size: 28px;
+}
+.empresa-logo img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.empresa-logo-hover {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: rgba(0, 0, 0, 0.5);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+.empresa-logo:hover .empresa-logo-hover {
+  opacity: 1;
+}
+.empresa-brand-side {
+  flex: 1;
+  min-width: 0;
+}
+.empresa-brand-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+/* Integraciones */
+.integ-meta-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  align-items: flex-start;
+  margin-bottom: 14px;
+}
+.integ-meta-title {
+  font-size: 16px;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+.integ-canales {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.integ-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: var(--card);
+  border: 1px solid var(--glass-brd);
+  border-radius: 12px;
+  padding: 11px 14px;
+}
+.integ-row-name {
+  font-size: 13.5px;
+  font-weight: 600;
+}
+.integ-row-desc {
+  font-size: 11.5px;
+  color: var(--muted);
+  margin-top: 2px;
+}
+.integ-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 14px;
+}
+.integ-nota {
+  margin-top: 14px;
+  margin-bottom: 0;
+}
+
+/* Mi personal (equipo) */
+.equipo-lista {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.equipo-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--card);
+  border: 1px solid var(--glass-brd);
+  border-radius: 12px;
+  padding: 10px 12px;
+  flex-wrap: wrap;
+}
+.equipo-avatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+  font-size: 14px;
+  color: #1a0d06;
+  background: linear-gradient(135deg, var(--orange), var(--orange-soft));
+  flex-shrink: 0;
+}
+.equipo-info {
+  flex: 1;
+  min-width: 120px;
+}
+.equipo-nombre {
+  font-size: 13.5px;
+  font-weight: 600;
+}
+.equipo-correo {
+  font-size: 11.5px;
+  color: var(--muted);
+}
