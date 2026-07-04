@@ -88,6 +88,7 @@ const NAV_ADMIN: NavGroup[] = [
     items: [
       { href: "/consola/inbox", label: "Inbox", icon: IconInbox },
       { href: "/consola/leads", label: "Leads", icon: IconLeads },
+      { href: "/consola/agenda", label: "Agenda", icon: IconAgenda },
     ],
   },
   {
