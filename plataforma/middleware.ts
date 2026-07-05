@@ -1,30 +1,66 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createServerClient } from "@supabase/ssr";
 
-// Candado simple para la versión online (HTTP Basic Auth).
-// Se activa SOLO si existe CONSOLE_PASSWORD en el entorno:
-//   usuario: leadlab · contraseña: CONSOLE_PASSWORD
-// En local (sin la variable) no molesta. La autenticación real por
-// usuario llega con Supabase Auth en la Fase 3.
-export function middleware(req: NextRequest) {
-  const pass = process.env.CONSOLE_PASSWORD;
-  if (!pass) return NextResponse.next();
+const URL = process.env.SUPABASE_URL;
+const ANON = process.env.SUPABASE_ANON_KEY;
+const PASS = process.env.CONSOLE_PASSWORD;
 
-  // El webhook de WhatsApp debe quedar accesible para Meta
-  if (req.nextUrl.pathname.startsWith("/api/canales/")) return NextResponse.next();
+// Rutas siempre accesibles (sin sesión)
+function exenta(path: string): boolean {
+  return (
+    path === "/login" ||
+    path.startsWith("/api/auth/") || // endpoints de login
+    path.startsWith("/api/canales/") // webhook de Meta
+  );
+}
 
-  const auth = req.headers.get("authorization") ?? "";
-  if (auth.startsWith("Basic ")) {
-    try {
-      const [user, pwd] = atob(auth.slice(6)).split(":");
-      if (user === "leadlab" && pwd === pass) return NextResponse.next();
-    } catch {
-      // header malformado → pedir credenciales de nuevo
+export async function middleware(req: NextRequest) {
+  const path = req.nextUrl.pathname;
+  if (exenta(path)) return NextResponse.next();
+
+  // --- Modo Supabase Auth (login real con clave + código) ---
+  if (URL && ANON) {
+    const res = NextResponse.next({ request: req });
+    const supabase = createServerClient(URL, ANON, {
+      cookies: {
+        getAll() {
+          return req.cookies.getAll();
+        },
+        setAll(list) {
+          list.forEach(({ name, value, options }) => res.cookies.set(name, value, options));
+        },
+      },
+    });
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) {
+      const url = req.nextUrl.clone();
+      url.pathname = "/login";
+      url.search = "";
+      return NextResponse.redirect(url);
     }
+    return res;
   }
-  return new NextResponse("Acceso restringido", {
-    status: 401,
-    headers: { "WWW-Authenticate": 'Basic realm="Lead Lab"' },
-  });
+
+  // --- Fallback: candado básico (mientras no esté la auth real) ---
+  if (PASS) {
+    const auth = req.headers.get("authorization") ?? "";
+    if (auth.startsWith("Basic ")) {
+      try {
+        const [user, pwd] = atob(auth.slice(6)).split(":");
+        if (user === "leadlab" && pwd === PASS) return NextResponse.next();
+      } catch {
+        /* header malformado */
+      }
+    }
+    return new NextResponse("Acceso restringido", {
+      status: 401,
+      headers: { "WWW-Authenticate": 'Basic realm="Lead Lab"' },
+    });
+  }
+
+  return NextResponse.next();
 }
 
 export const config = {

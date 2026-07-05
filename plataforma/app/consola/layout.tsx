@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import type { ReactNode } from "react";
 import { AccountProvider, useAccount } from "./_account/AccountContext";
 
@@ -164,6 +164,7 @@ function Sidebar() {
       <div className="con-sidebar-foot">
         <AccountSwitcher />
         <ThemeToggle />
+        <LogoutButton />
       </div>
     </aside>
   );
@@ -244,6 +245,20 @@ function ThemeToggle() {
         🌙 Oscuro
       </button>
     </div>
+  );
+}
+
+function LogoutButton() {
+  const router = useRouter();
+  async function salir() {
+    await fetch("/api/auth/logout", { method: "POST" }).catch(() => {});
+    router.push("/login");
+    router.refresh();
+  }
+  return (
+    <button className="con-logout" onClick={salir}>
+      Cerrar sesión
+    </button>
   );
 }
 
