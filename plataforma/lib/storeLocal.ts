@@ -3,7 +3,7 @@
 // ============================================================
 import fs from "fs";
 import path from "path";
-import type { Tenant, Conversacion, Mensaje, Lead, Cita, Derivacion, UsoEvento, Cerebro, Etapa } from "./types";
+import type { Tenant, Conversacion, Mensaje, Lead, Cita, Derivacion, UsoEvento, Cerebro, Etapa, Miembro } from "./types";
 import { ETAPAS } from "./types";
 void ETAPAS;
 
@@ -15,6 +15,7 @@ type DB = {
   citas: Cita[];
   derivaciones: Derivacion[];
   usos: UsoEvento[];
+  miembros: Miembro[];
 };
 
 // ---------- infraestructura ----------
@@ -72,6 +73,7 @@ function getDb(): DB {
     if (fs.existsSync(DATA_FILE)) {
       db = JSON.parse(fs.readFileSync(DATA_FILE, "utf8")) as DB;
       if (!db.usos) db.usos = [];
+      if (!db.miembros) db.miembros = [];
       return db;
     }
   } catch {
@@ -450,6 +452,7 @@ function seed(): DB {
     citas,
     derivaciones,
     usos: [],
+    miembros: [],
   };
 }
 
@@ -524,7 +527,7 @@ export async function updateCerebro(tid: string, cerebro: Cerebro): Promise<Tena
 /** Actualiza datos top-level del negocio (no cerebro, no tipo/plan/id). */
 export async function updateTenant(
   tid: string,
-  patch: { nombre?: string; rubro?: string; agente?: string; color?: string },
+  patch: { nombre?: string; rubro?: string; agente?: string; color?: string; logoUrl?: string | null },
 ): Promise<Tenant | undefined> {
   const t = getDb().tenants.find((x) => x.id === tid);
   if (t) {
@@ -532,9 +535,59 @@ export async function updateTenant(
     if (patch.rubro !== undefined) t.rubro = patch.rubro;
     if (patch.agente !== undefined) t.agente = patch.agente;
     if (patch.color !== undefined) t.color = patch.color;
+    if (patch.logoUrl !== undefined) t.logoUrl = patch.logoUrl ?? undefined;
     save();
   }
   return t;
+}
+
+// Logo: en local guardamos la propia dataURL en el tenant.
+export async function guardarLogo(tid: string, dataUrl: string): Promise<string | undefined> {
+  const t = getDb().tenants.find((x) => x.id === tid);
+  if (t) {
+    t.logoUrl = dataUrl;
+    save();
+    return dataUrl;
+  }
+  return undefined;
+}
+export async function quitarLogo(tid: string): Promise<void> {
+  const t = getDb().tenants.find((x) => x.id === tid);
+  if (t) {
+    delete t.logoUrl;
+    save();
+  }
+}
+
+// Miembros del equipo
+export async function listMiembros(tenantId: string): Promise<Miembro[]> {
+  return getDb()
+    .miembros.filter((m) => m.tenantId === tenantId)
+    .sort((a, b) => a.creado.localeCompare(b.creado));
+}
+export async function crearMiembro(input: {
+  tenantId: string;
+  nombre: string;
+  correo: string;
+  rol: "dueno" | "equipo";
+}): Promise<Miembro> {
+  const m: Miembro = {
+    id: id("mbr"),
+    tenantId: input.tenantId,
+    nombre: input.nombre,
+    correo: input.correo,
+    rol: input.rol,
+    estado: "pendiente",
+    creado: ahora(),
+  };
+  getDb().miembros.push(m);
+  save();
+  return m;
+}
+export async function eliminarMiembro(mid: string): Promise<void> {
+  const d = getDb();
+  d.miembros = d.miembros.filter((m) => m.id !== mid);
+  save();
 }
 
 export async function listConversaciones(tenantId?: string): Promise<Conversacion[]> {

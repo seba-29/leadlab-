@@ -14,6 +14,7 @@ import type {
   UsoEvento,
   Cerebro,
   Etapa,
+  Miembro,
 } from "./types";
 import { datosSeed } from "./storeLocal";
 
@@ -82,6 +83,7 @@ const tenantARow = (t: Tenant) => ({
   model: t.model,
   cerebro: t.cerebro,
   prompt_override: t.promptOverride ?? null,
+  logo_url: t.logoUrl ?? null,
 });
 const rowATenant = (r: any): Tenant => ({
   id: r.id,
@@ -93,6 +95,7 @@ const rowATenant = (r: any): Tenant => ({
   model: r.model,
   cerebro: r.cerebro as Cerebro,
   promptOverride: r.prompt_override ?? undefined,
+  logoUrl: r.logo_url ?? undefined,
 });
 
 const convARow = (c: Conversacion) => ({
@@ -284,7 +287,7 @@ export async function updateCerebro(tid: string, cerebro: Cerebro): Promise<Tena
 /** Actualiza datos top-level del negocio (no cerebro, no tipo/plan/id). */
 export async function updateTenant(
   tid: string,
-  patch: { nombre?: string; rubro?: string; agente?: string; color?: string },
+  patch: { nombre?: string; rubro?: string; agente?: string; color?: string; logoUrl?: string | null },
 ): Promise<Tenant | undefined> {
   await ensureSeed();
   const row: Record<string, unknown> = {};
@@ -292,6 +295,7 @@ export async function updateTenant(
   if (patch.rubro !== undefined) row.rubro = patch.rubro;
   if (patch.agente !== undefined) row.agente = patch.agente;
   if (patch.color !== undefined) row.color = patch.color;
+  if (patch.logoUrl !== undefined) row.logo_url = patch.logoUrl;
   if (Object.keys(row).length === 0) return getTenant(tid);
   const { data, error } = await sb()
     .from("tenants")
@@ -301,6 +305,78 @@ export async function updateTenant(
     .maybeSingle();
   lanzar("updateTenant", error);
   return data ? rowATenant(data) : undefined;
+}
+
+// ---------- Logo (Supabase Storage, bucket público 'branding') ----------
+export async function guardarLogo(tid: string, dataUrl: string): Promise<string | undefined> {
+  await ensureSeed();
+  const m = /^data:(image\/[a-z0-9.+-]+);base64,(.+)$/i.exec(dataUrl);
+  if (!m) throw new Error("[supabase:guardarLogo] dataURL inválida");
+  const contentType = m[1];
+  const ext = (contentType.split("/")[1] ?? "png").replace("jpeg", "jpg").replace("svg+xml", "svg");
+  const bytes = Buffer.from(m[2], "base64");
+  const path = `${tid}/${Date.now()}.${ext}`;
+  const up = await sb().storage.from("branding").upload(path, bytes, { contentType, upsert: true });
+  lanzar("guardarLogo:upload", up.error as { message: string } | null);
+  const url = sb().storage.from("branding").getPublicUrl(path).data.publicUrl;
+  const { error } = await sb().from("tenants").update({ logo_url: url }).eq("id", tid);
+  lanzar("guardarLogo:update", error);
+  return url;
+}
+
+export async function quitarLogo(tid: string): Promise<void> {
+  await ensureSeed();
+  const { error } = await sb().from("tenants").update({ logo_url: null }).eq("id", tid);
+  lanzar("quitarLogo", error);
+}
+
+// ---------- Miembros del equipo ----------
+const rowAMiembro = (r: any): Miembro => ({
+  id: r.id,
+  tenantId: r.tenant_id,
+  nombre: r.nombre,
+  correo: r.correo,
+  rol: r.rol,
+  estado: r.estado,
+  creado: r.creado,
+});
+
+export async function listMiembros(tenantId: string): Promise<Miembro[]> {
+  await ensureSeed();
+  const { data, error } = await sb()
+    .from("miembros")
+    .select("*")
+    .eq("tenant_id", tenantId)
+    .order("creado");
+  lanzar("listMiembros", error);
+  return (data ?? []).map(rowAMiembro);
+}
+
+export async function crearMiembro(input: {
+  tenantId: string;
+  nombre: string;
+  correo: string;
+  rol: "dueno" | "equipo";
+}): Promise<Miembro> {
+  await ensureSeed();
+  const { data, error } = await sb()
+    .from("miembros")
+    .insert({
+      tenant_id: input.tenantId,
+      nombre: input.nombre,
+      correo: input.correo,
+      rol: input.rol,
+    })
+    .select()
+    .single();
+  lanzar("crearMiembro", error);
+  return rowAMiembro(data);
+}
+
+export async function eliminarMiembro(id: string): Promise<void> {
+  await ensureSeed();
+  const { error } = await sb().from("miembros").delete().eq("id", id);
+  lanzar("eliminarMiembro", error);
 }
 
 export async function listConversaciones(tenantId?: string): Promise<Conversacion[]> {

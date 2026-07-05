@@ -26,6 +26,17 @@ export type Tenant = {
   model: string;
   cerebro: Cerebro;
   promptOverride?: string; // si existe, se usa tal cual (caso Lía)
+  logoUrl?: string; // logo de marca (Supabase Storage)
+};
+
+export type Miembro = {
+  id: string;
+  tenantId: string;
+  nombre: string;
+  correo: string;
+  rol: "dueno" | "equipo";
+  estado: "pendiente" | "activo";
+  creado: string;
 };
 
 export type Conversacion = {

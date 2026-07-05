@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useAccount } from "../_account/AccountContext";
 import { planClp } from "@/lib/pricing";
 
@@ -21,8 +21,15 @@ type Tenant = {
   color: string;
   cerebro?: Cerebro;
   phoneNumberId?: string;
+  logoUrl?: string;
 };
-type Usuario = { id: string; nombre: string; correo: string; rol: "Dueño" | "Equipo" };
+type Miembro = {
+  id: string;
+  nombre: string;
+  correo: string;
+  rol: "dueno" | "equipo";
+  estado: string;
+};
 type Tab = "empresa" | "integraciones" | "personal" | "plan";
 
 const CLP = new Intl.NumberFormat("es-CL", {
@@ -44,7 +51,7 @@ export default function Configuracion() {
   const [tab, setTab] = useState<Tab>("empresa");
   const [tenant, setTenant] = useState<Tenant | null>(null);
 
-  useEffect(() => {
+  const cargarTenant = useCallback(() => {
     if (!tenantId) {
       setTenant(null);
       return;
@@ -54,6 +61,15 @@ export default function Configuracion() {
       .then((d) => setTenant(d.tenant ?? null))
       .catch(() => {});
   }, [tenantId]);
+
+  useEffect(() => {
+    cargarTenant();
+  }, [cargarTenant]);
+
+  function reload() {
+    cargarTenant();
+    refreshTenants(); // que el switcher/banner reflejen logo/color al toque
+  }
 
   if (!tenantId) {
     return (
@@ -89,9 +105,7 @@ export default function Configuracion() {
         ))}
       </div>
 
-      {tab === "empresa" && (
-        <MiEmpresa tenant={tenant} tenantId={tenantId} onSaved={refreshTenants} />
-      )}
+      {tab === "empresa" && <MiEmpresa tenant={tenant} tenantId={tenantId} reload={reload} />}
       {tab === "integraciones" && <Integraciones tenant={tenant} />}
       {tab === "personal" && <MiPersonal tenantId={tenantId} />}
       {tab === "plan" && <PlanTab tenant={tenant} />}
@@ -103,15 +117,15 @@ export default function Configuracion() {
 function MiEmpresa({
   tenant,
   tenantId,
-  onSaved,
+  reload,
 }: {
   tenant: Tenant;
   tenantId: string;
-  onSaved: () => void;
+  reload: () => void;
 }) {
-  const { logos, setLogo } = useAccount();
-  const logo = logos[tenantId];
   const fileRef = useRef<HTMLInputElement>(null);
+  const logo = tenant.logoUrl;
+  const [subiendo, setSubiendo] = useState(false);
   const [form, setForm] = useState({
     nombre: tenant.nombre,
     rubro: tenant.rubro,
@@ -130,8 +144,24 @@ function MiEmpresa({
       return;
     }
     const reader = new FileReader();
-    reader.onload = () => setLogo(tenantId, String(reader.result));
+    reader.onload = async () => {
+      setSubiendo(true);
+      await fetch(`/api/tenants/${tenantId}/logo`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ dataUrl: String(reader.result) }),
+      }).catch(() => {});
+      setSubiendo(false);
+      reload();
+    };
     reader.readAsDataURL(file);
+  }
+
+  async function quitarLogo() {
+    setSubiendo(true);
+    await fetch(`/api/tenants/${tenantId}/logo`, { method: "DELETE" }).catch(() => {});
+    setSubiendo(false);
+    reload();
   }
 
   async function guardar() {
@@ -155,7 +185,7 @@ function MiEmpresa({
     }).catch(() => {});
     setGuardando(false);
     setOk(true);
-    onSaved();
+    reload();
     setTimeout(() => setOk(false), 2500);
   }
 
@@ -175,17 +205,19 @@ function MiEmpresa({
           ) : (
             <span>{tenant.nombre[0]}</span>
           )}
-          <div className="empresa-logo-hover">Cambiar</div>
+          <div className="empresa-logo-hover">{subiendo ? "…" : "Cambiar"}</div>
         </div>
         <div className="empresa-brand-side">
           <div className="agente-block-title">Logo de la marca</div>
-          <p className="agente-cap-desc">PNG o JPG, cuadrado, &lt; 600 KB. Se ve en el avatar de la cuenta.</p>
+          <p className="agente-cap-desc">
+            PNG o JPG, cuadrado, &lt; 600 KB. Se guarda en la nube y se ve en el avatar de la cuenta.
+          </p>
           <div className="empresa-brand-actions">
-            <button className="btn-ghost-sm" onClick={() => fileRef.current?.click()}>
-              Subir logo
+            <button className="btn-ghost-sm" onClick={() => fileRef.current?.click()} disabled={subiendo}>
+              {subiendo ? "Subiendo…" : "Subir logo"}
             </button>
             {logo && (
-              <button className="btn-ghost-sm" onClick={() => setLogo(tenantId, null)}>
+              <button className="btn-ghost-sm" onClick={quitarLogo} disabled={subiendo}>
                 Quitar
               </button>
             )}
@@ -343,55 +375,49 @@ function Integraciones({ tenant }: { tenant: Tenant }) {
 
 /* ---------- Mi personal ---------- */
 function MiPersonal({ tenantId }: { tenantId: string }) {
-  const KEY = `leadlab-equipo-${tenantId}`;
-  const [usuarios, setUsuarios] = useState<Usuario[]>([]);
-  const [form, setForm] = useState<{ nombre: string; correo: string; rol: "Dueño" | "Equipo" }>({
+  const [usuarios, setUsuarios] = useState<Miembro[]>([]);
+  const [form, setForm] = useState<{ nombre: string; correo: string; rol: "dueno" | "equipo" }>({
     nombre: "",
     correo: "",
-    rol: "Equipo",
+    rol: "equipo",
   });
   const [error, setError] = useState("");
 
+  const cargar = useCallback(() => {
+    fetch(`/api/tenants/${tenantId}/miembros`)
+      .then((r) => r.json())
+      .then((d) => setUsuarios(d.miembros ?? []))
+      .catch(() => {});
+  }, [tenantId]);
+
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem(KEY);
-      if (raw) setUsuarios(JSON.parse(raw));
-    } catch {
-      /* ignore */
-    }
-  }, [KEY]);
+    cargar();
+  }, [cargar]);
 
-  function persistir(next: Usuario[]) {
-    setUsuarios(next);
-    try {
-      localStorage.setItem(KEY, JSON.stringify(next));
-    } catch {
-      /* ignore */
-    }
-  }
-
-  function agregar() {
+  async function agregar() {
     if (!form.nombre.trim() || !form.correo.trim()) {
       setError("Nombre y correo son obligatorios.");
       return;
     }
-    if (!/.+@.+\..+/.test(form.correo)) {
-      setError("Ese correo no se ve válido.");
-      return;
-    }
     setError("");
-    const nuevo: Usuario = {
-      id: `u_${form.correo.toLowerCase()}`,
-      nombre: form.nombre.trim(),
-      correo: form.correo.trim(),
-      rol: form.rol,
-    };
-    if (usuarios.some((u) => u.id === nuevo.id)) {
-      setError("Ya agregaste ese correo.");
+    const d = await fetch(`/api/tenants/${tenantId}/miembros`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(form),
+    }).then((r) => r.json());
+    if (d.error) {
+      setError(d.error);
       return;
     }
-    persistir([...usuarios, nuevo]);
-    setForm({ nombre: "", correo: "", rol: "Equipo" });
+    setForm({ nombre: "", correo: "", rol: "equipo" });
+    cargar();
+  }
+
+  async function quitar(id: string) {
+    await fetch(`/api/tenants/${tenantId}/miembros?miembroId=${encodeURIComponent(id)}`, {
+      method: "DELETE",
+    }).catch(() => {});
+    cargar();
   }
 
   return (
@@ -411,13 +437,13 @@ function MiPersonal({ tenantId }: { tenantId: string }) {
                   <div className="equipo-nombre">{u.nombre}</div>
                   <div className="equipo-correo">{u.correo}</div>
                 </div>
-                <span className={`ag-tag ${u.rol === "Dueño" ? "interno" : "cliente"}`}>{u.rol}</span>
-                <span className="estado-pill canal-estado pendiente">Invitación pendiente</span>
-                <button
-                  className="cb-del"
-                  title="Quitar"
-                  onClick={() => persistir(usuarios.filter((x) => x.id !== u.id))}
-                >
+                <span className={`ag-tag ${u.rol === "dueno" ? "interno" : "cliente"}`}>
+                  {u.rol === "dueno" ? "Dueño" : "Equipo"}
+                </span>
+                <span className="estado-pill canal-estado pendiente">
+                  {u.estado === "activo" ? "Activo" : "Invitación pendiente"}
+                </span>
+                <button className="cb-del" title="Quitar" onClick={() => quitar(u.id)}>
                   ×
                 </button>
               </div>
@@ -425,8 +451,8 @@ function MiPersonal({ tenantId }: { tenantId: string }) {
           </div>
         )}
         <p className="agente-nota" style={{ padding: "12px 0 0" }}>
-          Las invitaciones por correo se activan con la autenticación (próxima fase). Por ahora quedan
-          guardadas acá.
+          Guardado en Supabase. El envío del correo de invitación y el login se activan con la
+          autenticación (próxima fase).
         </p>
       </div>
 
@@ -450,10 +476,10 @@ function MiPersonal({ tenantId }: { tenantId: string }) {
           <select
             className="con-select drawer-select"
             value={form.rol}
-            onChange={(e) => setForm({ ...form, rol: e.target.value as "Dueño" | "Equipo" })}
+            onChange={(e) => setForm({ ...form, rol: e.target.value as "dueno" | "equipo" })}
           >
-            <option value="Equipo">Equipo — responde y gestiona</option>
-            <option value="Dueño">Dueño — acceso total</option>
+            <option value="equipo">Equipo — responde y gestiona</option>
+            <option value="dueno">Dueño — acceso total</option>
           </select>
         </label>
         {error && <div className="modal-error">⚠️ {error}</div>}

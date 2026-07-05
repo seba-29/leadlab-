@@ -163,3 +163,28 @@ create policy sel_usage on usage_events for select
 -- ---------- Realtime (inbox en vivo) ----------
 -- En el dashboard de Supabase: Database → Replication → añadir
 -- 'mensajes' y 'conversaciones' a la publicación supabase_realtime.
+
+-- ============================================================
+-- Migración: branding_y_miembros (logo de marca + equipo)
+-- ============================================================
+alter table tenants add column if not exists logo_url text;
+
+create table if not exists miembros (
+  id         text primary key default ('mbr_' || replace(gen_random_uuid()::text,'-','')),
+  tenant_id  text not null references tenants(id) on delete cascade,
+  nombre     text not null,
+  correo     text not null,
+  rol        text not null default 'equipo' check (rol in ('dueno','equipo')),
+  estado     text not null default 'pendiente' check (estado in ('pendiente','activo')),
+  creado     timestamptz not null default now(),
+  unique (tenant_id, correo)
+);
+create index if not exists idx_miembros_tenant on miembros(tenant_id, creado);
+alter table miembros enable row level security;
+create policy sel_miembros on miembros for select
+  using (es_leadlab() or tenant_id in (select mis_tenants()));
+
+-- Bucket público para logos de marca (la app sube con service_role).
+insert into storage.buckets (id, name, public)
+values ('branding','branding', true)
+on conflict (id) do nothing;
