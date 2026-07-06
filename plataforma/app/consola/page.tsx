@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useAccount, scopedUrl } from "./_account/AccountContext";
+import { ConversionView, fmtSeg } from "./conversion/view";
 
 type Resumen = {
   conversaciones7d: number;
@@ -59,7 +60,7 @@ export default function Dashboard() {
       .catch(() => {});
   }, [scope, isAdmin]);
 
-  if (isAdmin) return <VistaGlobal />;
+  if (isAdmin) return <AdminDashboard />;
   if (!data) return <div className="con-loading">Cargando métricas…</div>;
 
   return (
@@ -266,53 +267,96 @@ type GlobalData = {
     mrrClp: number;
     nClientes: number;
     agentesActivos: number;
+    nuevos30d: number;
     leadsTotales: number;
+    leads7dTotal: number;
     ganadosTotales: number;
     derivacionesPendientes: number;
+    enRiesgo: number;
+    costoUsdMes: number;
     margenUsdMes: number;
     margenPct: number | null;
   };
   clientes: ClienteGlobal[];
 };
+type ConvResumen = { tasaCierre: number; tiempoRespuestaSeg: number | null };
 
-function VistaGlobal() {
+// Cara ADMIN de /consola: Dashboard con tabs [ Vista global | Conversión ].
+function AdminDashboard() {
+  const [tab, setTab] = useState<"global" | "conversion">("global");
+  return (
+    <div>
+      <header className="con-head">
+        <div>
+          <h1 className="con-title">Dashboard</h1>
+          <p className="con-sub">
+            El pulso de toda tu plataforma — lo comercial y lo operacional, en vivo.
+          </p>
+        </div>
+      </header>
+
+      <div className="tabbar">
+        <button className={tab === "global" ? "on" : ""} onClick={() => setTab("global")}>
+          Vista global
+        </button>
+        <button className={tab === "conversion" ? "on" : ""} onClick={() => setTab("conversion")}>
+          Conversión
+        </button>
+      </div>
+
+      {tab === "global" ? <VistaGlobalContenido /> : <ConversionView />}
+    </div>
+  );
+}
+
+function VistaGlobalContenido() {
   const { entrarComo } = useAccount();
   const [g, setG] = useState<GlobalData | null>(null);
+  const [conv, setConv] = useState<ConvResumen | null>(null);
 
   useEffect(() => {
     fetch("/api/admin/global")
       .then((r) => r.json())
       .then(setG)
       .catch(() => {});
+    fetch("/api/admin/conversion")
+      .then((r) => r.json())
+      .then((d) => setConv({ tasaCierre: d.tasaCierre, tiempoRespuestaSeg: d.tiempoRespuestaSeg }))
+      .catch(() => {});
   }, []);
 
   if (!g) return <div className="con-loading">Cargando vista global…</div>;
   const t = g.totales;
+  const pct = t.margenPct != null ? `${Math.round(t.margenPct * 100)}% de lo que cobras` : "—";
 
   return (
     <div>
-      <header className="con-head">
-        <div>
-          <h1 className="con-title">Vista global</h1>
-          <p className="con-sub">El pulso de toda tu plataforma, en vivo.</p>
-        </div>
-      </header>
-
       <div className="tiles">
         <Tile label="MRR de referencia" value={CLP.format(t.mrrClp)} hint="ingreso mensual recurrente" accent />
-        <Tile label="Margen mensual" value={USD.format(t.margenUsdMes)} hint="cobras − gastas en IA" />
+        <Tile label="Margen mensual" value={USD.format(t.margenUsdMes)} hint={pct} />
         <Tile
           label="Clientes activos"
           value={String(t.nClientes)}
-          hint={`${t.agentesActivos} agentes con actividad`}
+          hint={`${t.agentesActivos} con actividad · ${t.nuevos30d} nuevo${t.nuevos30d === 1 ? "" : "s"} (30d)`}
         />
-        <Tile label="Leads totales" value={String(t.leadsTotales)} hint={`${t.ganadosTotales} ganados`} />
+        <Tile
+          label="Conversión global"
+          value={conv ? `${Math.round(conv.tasaCierre * 100)}%` : "…"}
+          hint="ganados vs perdidos"
+        />
+        <Tile
+          label="Tiempo de respuesta IA"
+          value={conv ? fmtSeg(conv.tiempoRespuestaSeg) : "…"}
+          hint="promedio bot→cliente"
+        />
         <Tile
           label="Requieren atención"
           value={String(t.derivacionesPendientes)}
-          hint="derivaciones pendientes"
+          hint={`${t.enRiesgo} cliente${t.enRiesgo === 1 ? "" : "s"} en riesgo`}
         />
       </div>
+
+      <Alertas clientes={g.clientes} onEntrar={entrarComo} />
 
       <section className="panel dash-side dash-panel-pad">
         <div className="panel-title">Salud por cliente · toca para entrar</div>
@@ -327,6 +371,51 @@ function VistaGlobal() {
         )}
       </section>
     </div>
+  );
+}
+
+// Panel "a quién llamar hoy": alertas derivadas de la salud de cada cliente.
+function Alertas({
+  clientes,
+  onEntrar,
+}: {
+  clientes: ClienteGlobal[];
+  onEntrar: (id: string) => void;
+}) {
+  const alertas: { id: string; nombre: string; color: string; tono: "rojo" | "ambar"; msg: string }[] =
+    [];
+  for (const c of clientes) {
+    if (c.tipo === "cliente" && c.margenPct != null && c.margenPct < 0) {
+      alertas.push({ id: c.id, nombre: c.nombre, color: c.color, tono: "rojo", msg: "Margen negativo — gastás más de lo que cobrás" });
+    } else if (c.tipo === "cliente" && c.conv7d === 0) {
+      alertas.push({ id: c.id, nombre: c.nombre, color: c.color, tono: "rojo", msg: "0 conversaciones en 7 días — cliente inactivo" });
+    } else if (c.derivacionesPend >= 3) {
+      alertas.push({ id: c.id, nombre: c.nombre, color: c.color, tono: "ambar", msg: `${c.derivacionesPend} derivaciones sin atender` });
+    }
+  }
+
+  return (
+    <section className="panel dash-side dash-panel-pad">
+      <div className="panel-title">🔔 Necesitan tu ojo hoy</div>
+      {alertas.length === 0 ? (
+        <p className="empty">Todo sano ✨ ningún cliente necesita atención ahora mismo.</p>
+      ) : (
+        <div className="mini-leads">
+          {alertas.map((a) => (
+            <button key={a.id + a.msg} className="mini-lead alerta-item" onClick={() => onEntrar(a.id)}>
+              <div className="alerta-left">
+                <span className="kb-dot" style={{ background: a.color }} />
+                <div>
+                  <div className="mini-lead-name">{a.nombre}</div>
+                  <div className="mini-lead-int">{a.msg}</div>
+                </div>
+              </div>
+              <span className={`salud-pill ${a.tono}`}>{a.tono === "rojo" ? "Riesgo" : "Atención"}</span>
+            </button>
+          ))}
+        </div>
+      )}
+    </section>
   );
 }
 

@@ -75,15 +75,30 @@ export async function GET() {
   const planUsdTotal = clientes.reduce((s, c) => s + margen(c.tipo, c.costoUsd).planUsd, 0);
   const costoUsdMes = clientes.reduce((s, c) => s + c.costoUsd, 0);
 
+  // "Clientes nuevos (30d)": sin fecha de alta en el tenant, usamos como proxy
+  // la primera actividad (lead o conversación) dentro de los últimos 30 días.
+  const hace30 = Date.now() - 30 * DIA_MS;
+  const nuevos30d = tenants.filter((t) => {
+    if (t.tipo !== "cliente") return false;
+    const fechas = [
+      ...leads.filter((l) => l.tenantId === t.id).map((l) => new Date(l.creado).getTime()),
+      ...convs.filter((c) => c.tenantId === t.id).map((c) => new Date(c.creado).getTime()),
+    ];
+    return fechas.length > 0 && Math.min(...fechas) >= hace30;
+  }).length;
+
   const totales = {
     mrrClp: clientes.reduce((s, c) => s + c.planClp, 0),
     nClientes: clientes.filter((c) => c.tipo === "cliente").length,
     agentesActivos: clientes.filter((c) => c.conv7d > 0).length,
+    nuevos30d,
     convActivas7d: convs.filter((c) => en7(c.actualizado)).length,
     convTotales: convs.length,
     leadsTotales: leads.length,
+    leads7dTotal: clientes.reduce((s, c) => s + c.leads7d, 0),
     ganadosTotales: leads.filter((l) => l.etapa === "ganado").length,
     derivacionesPendientes: derivaciones.length,
+    enRiesgo: clientes.filter((c) => c.salud === "rojo").length,
     costoUsdMes,
     margenUsdMes: planUsdTotal - costoUsdMes,
     margenPct: planUsdTotal > 0 ? (planUsdTotal - costoUsdMes) / planUsdTotal : null,
