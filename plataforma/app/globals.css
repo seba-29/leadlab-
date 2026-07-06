@@ -463,10 +463,16 @@ body {
 .con-nav-item.active .con-nav-icon {
   color: var(--t-orange);
 }
-.con-sidebar-foot {
+.con-sidebar-tail {
   margin-top: auto;
   border-top: 1px solid var(--glass-brd);
-  padding-top: 14px;
+  padding-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.con-sidebar-tail .con-user {
+  padding: 6px 8px 0;
 }
 .con-user {
   display: flex;
@@ -524,7 +530,25 @@ body {
     white-space: nowrap;
     padding: 8px 10px;
   }
-  .con-sidebar-foot {
+  .con-switch {
+    flex-direction: row;
+    align-items: center;
+    margin: 0;
+  }
+  .con-switch .con-user {
+    display: none;
+  }
+  .con-switch-select {
+    width: auto;
+  }
+  .con-sidebar-tail {
+    flex-direction: row;
+    align-items: center;
+    margin-top: 0;
+    border-top: none;
+    padding-top: 0;
+  }
+  .con-sidebar-tail .con-user {
     display: none;
   }
 }
@@ -2497,4 +2521,158 @@ body {
 .con-logout:hover {
   color: var(--text);
   border-color: rgba(255, 107, 44, 0.4);
+}
+
+/* ============================================================
+   Topbar de la consola + menú de usuario (arriba a la derecha)
+   ============================================================ */
+.con-topbar {
+  position: sticky;
+  top: 0;
+  z-index: 6;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 52px;
+  /* sangra el padding de .con-main para ir borde a borde */
+  margin: -26px calc(-1 * clamp(18px, 3vw, 40px)) 16px;
+  padding: 8px clamp(18px, 3vw, 40px);
+  background: var(--surface);
+  backdrop-filter: blur(18px) saturate(140%);
+  border-bottom: 1px solid var(--glass-brd);
+}
+.con-topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
+/* Toggle de tema compacto (solo emoji, sin texto) para la topbar */
+.theme-toggle.compact {
+  margin-top: 0;
+}
+.theme-toggle.compact button {
+  flex: none;
+}
+.theme-toggle.compact .tt-label {
+  display: none;
+}
+
+/* Botón avatar + dropdown */
+.con-usermenu {
+  position: relative;
+}
+.con-usermenu-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  background: var(--glass);
+  border: 1px solid var(--glass-brd);
+  border-radius: 100px;
+  padding: 4px 8px 4px 4px;
+  color: var(--text);
+  font-family: inherit;
+  transition: border-color 0.15s, background 0.15s;
+}
+.con-usermenu-btn:hover {
+  border-color: rgba(255, 107, 44, 0.35);
+}
+.con-usermenu-avatar {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+  font-size: 12px;
+  color: #1a0d06;
+  background: linear-gradient(135deg, var(--orange), var(--orange-soft));
+}
+.con-usermenu-chev {
+  width: 14px;
+  height: 14px;
+  color: var(--faint);
+}
+.con-usermenu-pop {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 8px);
+  min-width: 224px;
+  padding: 6px;
+  background: var(--panel-solid);
+  border: 1px solid var(--glass-brd);
+  border-radius: 14px;
+  box-shadow: 0 16px 44px rgba(0, 0, 0, 0.35);
+  backdrop-filter: blur(18px);
+  animation: pop-in 0.14s ease;
+  z-index: 20;
+}
+@keyframes pop-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.con-usermenu-head {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 6px;
+}
+.con-usermenu-name {
+  font-size: 13px;
+  font-weight: 600;
+}
+.con-usermenu-mail {
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 2px;
+  word-break: break-all;
+}
+.con-usermenu-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  padding: 9px 12px;
+  border: none;
+  background: none;
+  border-radius: 9px;
+  color: var(--text);
+  text-decoration: none;
+  font-family: inherit;
+  font-size: 13px;
+  transition: background 0.12s;
+}
+.con-usermenu-item:hover {
+  background: var(--hover);
+}
+.con-usermenu-item.danger {
+  color: #ff9d7d;
+}
+.con-usermenu-ico {
+  display: inline-flex;
+  width: 16px;
+  height: 16px;
+}
+.con-usermenu-ico svg {
+  width: 100%;
+  height: 100%;
+}
+.con-usermenu-sep {
+  height: 1px;
+  background: var(--line);
+  margin: 6px 0;
+}
+@media (max-width: 760px) {
+  .con-topbar {
+    margin-top: -12px;
+  }
 }

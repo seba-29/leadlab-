@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import type { ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { AccountProvider, useAccount } from "./_account/AccountContext";
 
 // ---- Íconos (line-art, heredan currentColor) ----
@@ -41,13 +41,6 @@ const IconPeople = (
     <path d="M15.5 14.7c2.5.1 4.3 1.5 4.9 3.8" />
   </svg>
 );
-const IconBrain = (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-    <path d="M9.5 4A2.5 2.5 0 0 0 7 6.5v11a2.5 2.5 0 0 0 5 0v-11A2.5 2.5 0 0 0 9.5 4z" />
-    <path d="M14.5 4A2.5 2.5 0 0 1 17 6.5v11a2.5 2.5 0 0 1-5 0" />
-    <path d="M7 9H5.5A1.5 1.5 0 0 0 4 10.5v0A1.5 1.5 0 0 0 5.5 12H7M17 9h1.5A1.5 1.5 0 0 1 20 10.5v0a1.5 1.5 0 0 1-1.5 1.5H17" />
-  </svg>
-);
 const IconAgenda = (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
     <rect x="3.5" y="5" width="17" height="16" rx="2" />
@@ -58,11 +51,6 @@ const IconConfig = (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
     <circle cx="12" cy="12" r="3" />
     <path d="M12 3v2.4M12 18.6V21M4.5 7l2 1.2M17.5 15.8l2 1.2M4.5 17l2-1.2M17.5 8.2l2-1.2" />
-  </svg>
-);
-const IconFunnel = (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-    <path d="M3 5h18l-7 8v6l-4 2v-8L3 5z" />
   </svg>
 );
 const IconLayers = (
@@ -77,66 +65,67 @@ const IconBuilding = (
     <path d="M8 7h2M14 7h2M8 11h2M14 11h2M10 21v-3h4v3" />
   </svg>
 );
+const IconUser = (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+    <circle cx="12" cy="8" r="3.6" />
+    <path d="M5 20c.8-3.6 3.4-5.5 7-5.5s6.2 1.9 7 5.5" />
+  </svg>
+);
+const IconLogout = (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+    <path d="M15 12H4.5M12 8.5 15.5 12 12 15.5" />
+    <path d="M9 5.5V4.5A1.5 1.5 0 0 1 10.5 3h7A1.5 1.5 0 0 1 19 4.5v15a1.5 1.5 0 0 1-1.5 1.5h-7A1.5 1.5 0 0 1 9 19.5v-1" />
+  </svg>
+);
 
+// ---- Menú principal (aplanado: los submenús viven como TABS en cada página) ----
 type NavItem = { href: string; label: string; icon: ReactNode };
-type NavGroup = { label?: string; items: NavItem[] };
 
-const NAV_ADMIN: NavGroup[] = [
-  { label: "General", items: [{ href: "/consola", label: "Dashboard", icon: IconDash }] },
-  {
-    label: "Operación",
-    items: [
-      { href: "/consola/inbox", label: "Inbox", icon: IconInbox },
-      { href: "/consola/leads", label: "Leads", icon: IconLeads },
-    ],
-  },
-  {
-    label: "Agentes IA",
-    items: [
-      { href: "/consola/agentes", label: "Probar IA", icon: IconSpark },
-      { href: "/consola/cerebro", label: "Cerebro", icon: IconBrain },
-      { href: "/consola/plantillas", label: "Plantillas de rubro", icon: IconLayers },
-    ],
-  },
-  {
-    label: "Negocio",
-    items: [
-      { href: "/consola/clientes", label: "Clientes & consumo", icon: IconPeople },
-      { href: "/consola/conversion", label: "Conversión", icon: IconFunnel },
-      { href: "/consola/subcuentas", label: "Subcuentas", icon: IconBuilding },
-    ],
-  },
+const NAV_ADMIN: NavItem[] = [
+  { href: "/consola", label: "Dashboard", icon: IconDash },
+  { href: "/consola/inbox", label: "Inbox", icon: IconInbox },
+  { href: "/consola/leads", label: "Leads", icon: IconLeads },
+  { href: "/consola/agentes", label: "Agentes IA", icon: IconSpark },
+  { href: "/consola/plantillas", label: "Plantillas de rubro", icon: IconLayers },
+  { href: "/consola/clientes", label: "Clientes & consumo", icon: IconPeople },
+  { href: "/consola/subcuentas", label: "Subcuentas", icon: IconBuilding },
 ];
 
-const NAV_CLIENTE: NavGroup[] = [
-  {
-    items: [
-      { href: "/consola", label: "Resumen", icon: IconDash },
-      { href: "/consola/inbox", label: "Conversaciones", icon: IconInbox },
-      { href: "/consola/leads", label: "Leads", icon: IconLeads },
-      { href: "/consola/agenda", label: "Agenda", icon: IconAgenda },
-    ],
-  },
-  {
-    label: "Tu agente IA",
-    items: [
-      { href: "/consola/agentes", label: "Probar mi agente", icon: IconSpark },
-      { href: "/consola/cerebro", label: "Ficha del agente", icon: IconBrain },
-    ],
-  },
-  {
-    items: [{ href: "/consola/configuracion", label: "Configuración", icon: IconConfig }],
-  },
+const NAV_CLIENTE: NavItem[] = [
+  { href: "/consola", label: "Resumen", icon: IconDash },
+  { href: "/consola/inbox", label: "Conversaciones", icon: IconInbox },
+  { href: "/consola/leads", label: "Leads", icon: IconLeads },
+  { href: "/consola/agenda", label: "Agenda", icon: IconAgenda },
+  { href: "/consola/agentes", label: "Agentes IA", icon: IconSpark },
 ];
+
+// Configuración va SIEMPRE al pie del sidebar (administración / cuenta).
+const NAV_CONFIG: NavItem = {
+  href: "/consola/configuracion",
+  label: "Configuración",
+  icon: IconConfig,
+};
 
 function esActivo(href: string, pathname: string): boolean {
   return href === "/consola" ? pathname === "/consola" : pathname.startsWith(href);
 }
 
-function Sidebar() {
+function NavLink({ item }: { item: NavItem }) {
   const pathname = usePathname();
+  return (
+    <Link
+      href={item.href}
+      className={`con-nav-item ${esActivo(item.href, pathname) ? "active" : ""}`}
+    >
+      <span className="con-nav-icon">{item.icon}</span>
+      {item.label}
+    </Link>
+  );
+}
+
+function Sidebar() {
   const { isAdmin } = useAccount();
-  const grupos = isAdmin ? NAV_ADMIN : NAV_CLIENTE;
+  const items = isAdmin ? NAV_ADMIN : NAV_CLIENTE;
 
   return (
     <aside className="con-sidebar">
@@ -144,35 +133,27 @@ function Sidebar() {
         Lead<span className="brand-accent">Lab</span>
         <span className="brand-dot" />
       </Link>
+
+      {/* Admin: switcher de cuentas apenas debajo del logo. */}
+      {isAdmin && <AccountSwitcher />}
+
       <nav className="con-nav">
-        {grupos.map((g, gi) => (
-          <div key={g.label ?? `g${gi}`} className="con-nav-group">
-            {g.label && <div className="con-nav-group-label">{g.label}</div>}
-            {g.items.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={`con-nav-item ${esActivo(item.href, pathname) ? "active" : ""}`}
-              >
-                <span className="con-nav-icon">{item.icon}</span>
-                {item.label}
-              </Link>
-            ))}
-          </div>
+        {items.map((item) => (
+          <NavLink key={item.href} item={item} />
         ))}
       </nav>
-      <div className="con-sidebar-foot">
-        <AccountSwitcher />
-        <ThemeToggle />
-        <LogoutButton />
+
+      {/* Pie: Configuración al fondo + (cliente) su identidad pegada. */}
+      <div className="con-sidebar-tail">
+        <NavLink item={NAV_CONFIG} />
+        {!isAdmin && <ClientIdentity />}
       </div>
     </aside>
   );
 }
 
 function AccountSwitcher() {
-  const { cuentaActiva, tenants, isAdmin, current, entrarComo, volverAAdmin, logos } = useAccount();
-  const logo = current ? logos[current.id] : undefined;
+  const { cuentaActiva, tenants, entrarComo, volverAAdmin } = useAccount();
 
   const ordenados = [...tenants].sort((a, b) => {
     if (a.tipo !== b.tipo) return a.tipo === "interno" ? -1 : 1;
@@ -181,25 +162,11 @@ function AccountSwitcher() {
 
   return (
     <div className="con-switch">
-      <div className={`con-user ${isAdmin ? "" : "is-client"}`}>
-        <div
-          className="con-user-avatar"
-          style={!isAdmin && !logo ? { background: current?.color } : undefined}
-        >
-          {isAdmin ? (
-            "LL"
-          ) : logo ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img className="con-logo-img" src={logo} alt="" />
-          ) : (
-            current?.agente?.[0] ?? "?"
-          )}
-        </div>
+      <div className="con-user">
+        <div className="con-user-avatar">LL</div>
         <div>
-          <div className="con-user-name">{isAdmin ? "Lead Lab" : current?.nombre ?? "…"}</div>
-          <div className="con-user-role">
-            {isAdmin ? "Admin · global" : `Viendo como ${current?.agente ?? ""}`}
-          </div>
+          <div className="con-user-name">Lead Lab</div>
+          <div className="con-user-role">Admin · global</div>
         </div>
       </div>
       {tenants.length > 0 && (
@@ -211,7 +178,7 @@ function AccountSwitcher() {
           }
           aria-label="Cambiar de cuenta"
         >
-          <option value="admin">★ Admin — toda la operación</option>
+          <option value="admin">★ Admin · vista global</option>
           <optgroup label="Entrar como subcuenta">
             {ordenados.map((t) => (
               <option key={t.id} value={t.id}>
@@ -226,39 +193,156 @@ function AccountSwitcher() {
   );
 }
 
-function ThemeToggle() {
+function ClientIdentity() {
+  const { current, logos } = useAccount();
+  if (!current) return null;
+  const logo = logos[current.id];
+  return (
+    <div className="con-user is-client">
+      <div
+        className="con-user-avatar"
+        style={!logo ? { background: current.color } : undefined}
+      >
+        {logo ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img className="con-logo-img" src={logo} alt="" />
+        ) : (
+          current.agente?.[0] ?? "?"
+        )}
+      </div>
+      <div>
+        <div className="con-user-name">{current.nombre}</div>
+        <div className="con-user-role">{current.rubro || "Tu negocio"}</div>
+      </div>
+    </div>
+  );
+}
+
+function ThemeToggle({ compact = false }: { compact?: boolean }) {
   const { theme, setTheme } = useAccount();
   return (
-    <div className="theme-toggle" role="group" aria-label="Tema de la consola">
+    <div
+      className={`theme-toggle${compact ? " compact" : ""}`}
+      role="group"
+      aria-label="Tema de la consola"
+    >
       <button
         className={theme === "light" ? "on" : ""}
         aria-pressed={theme === "light"}
+        aria-label="Tema claro"
         onClick={() => setTheme("light")}
       >
-        ☀️ Claro
+        <span aria-hidden>☀️</span>
+        <span className="tt-label">Claro</span>
       </button>
       <button
         className={theme === "dark" ? "on" : ""}
         aria-pressed={theme === "dark"}
+        aria-label="Tema oscuro"
         onClick={() => setTheme("dark")}
       >
-        🌙 Oscuro
+        <span aria-hidden>🌙</span>
+        <span className="tt-label">Oscuro</span>
       </button>
     </div>
   );
 }
 
-function LogoutButton() {
+function UserMenu() {
   const router = useRouter();
+  const [open, setOpen] = useState(false);
+  const [me, setMe] = useState<{ nombre: string; email: string } | null>(null);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    fetch("/api/auth/me")
+      .then((r) => r.json())
+      .then((d) => {
+        if (d?.user) setMe(d.user);
+      })
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    if (!open) return;
+    function onDown(e: PointerEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setOpen(false);
+    }
+    document.addEventListener("pointerdown", onDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("pointerdown", onDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+
   async function salir() {
     await fetch("/api/auth/logout", { method: "POST" }).catch(() => {});
     router.push("/login");
     router.refresh();
   }
+
+  const nombre = me?.nombre ?? "Mi cuenta";
+  const email = me?.email ?? "";
+  const iniciales = nombre.slice(0, 2).toUpperCase();
+
   return (
-    <button className="con-logout" onClick={salir}>
-      Cerrar sesión
-    </button>
+    <div className="con-usermenu" ref={ref}>
+      <button
+        className="con-usermenu-btn"
+        aria-haspopup="menu"
+        aria-expanded={open}
+        aria-label="Menú de usuario"
+        onClick={() => setOpen((v) => !v)}
+      >
+        <span className="con-usermenu-avatar">{iniciales}</span>
+        <svg
+          className="con-usermenu-chev"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+        >
+          <path d="M6 9l6 6 6-6" />
+        </svg>
+      </button>
+      {open && (
+        <div className="con-usermenu-pop" role="menu">
+          <div className="con-usermenu-head">
+            <div className="con-usermenu-name">{nombre}</div>
+            {email && <div className="con-usermenu-mail">{email}</div>}
+          </div>
+          <Link
+            href="/consola/configuracion"
+            role="menuitem"
+            className="con-usermenu-item"
+            onClick={() => setOpen(false)}
+          >
+            <span className="con-usermenu-ico">{IconUser}</span>
+            Editar perfil
+          </Link>
+          <div className="con-usermenu-sep" />
+          <button className="con-usermenu-item danger" role="menuitem" onClick={salir}>
+            <span className="con-usermenu-ico">{IconLogout}</span>
+            Cerrar sesión
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ConTopbar() {
+  return (
+    <div className="con-topbar">
+      <div className="con-topbar-right">
+        <ThemeToggle compact />
+        <UserMenu />
+      </div>
+    </div>
   );
 }
 
@@ -290,6 +374,7 @@ function Shell({ children }: { children: ReactNode }) {
       <div className="bg-glow" aria-hidden />
       <Sidebar />
       <main className="con-main">
+        <ConTopbar />
         <ViewAsBanner />
         {children}
       </main>
