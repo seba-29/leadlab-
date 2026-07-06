@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useAccount, scopedUrl } from "../_account/AccountContext";
 
 type Lead = {
@@ -17,9 +17,23 @@ type Lead = {
   notas?: string;
   fuente: string;
   conversacionId?: string;
+  creado?: string;
   actualizado: string;
 };
 type Tenant = { id: string; nombre: string };
+
+const IconSearch = (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <circle cx="11" cy="11" r="7" />
+    <path d="M21 21l-4-4" />
+  </svg>
+);
+
+function dentroDe(iso: string | undefined, rango: string): boolean {
+  if (rango === "todo" || !iso) return true;
+  const dias = rango === "7d" ? 7 : rango === "30d" ? 30 : 90;
+  return new Date(iso).getTime() >= Date.now() - dias * 86400000;
+}
 
 const ETAPAS: { key: string; label: string }[] = [
   { key: "nuevo", label: "Nuevo" },
@@ -39,6 +53,10 @@ export default function Kanban() {
   const { scope, isAdmin, tenants } = useAccount();
   const [leads, setLeads] = useState<Lead[]>([]);
   const [filtro, setFiltro] = useState<string>("");
+  const [q, setQ] = useState("");
+  const [fFuente, setFFuente] = useState("");
+  const [fValor, setFValor] = useState("");
+  const [fFecha, setFFecha] = useState("todo");
   const [dragId, setDragId] = useState<string | null>(null);
   const [overCol, setOverCol] = useState<string | null>(null);
   const [selLead, setSelLead] = useState<Lead | null>(null);
@@ -54,6 +72,30 @@ export default function Kanban() {
   useEffect(() => {
     cargar();
   }, [filtro, scope]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const fuentes = useMemo(
+    () => Array.from(new Set(leads.map((l) => l.fuente).filter(Boolean))).sort(),
+    [leads],
+  );
+
+  const visibles = useMemo(() => {
+    const term = q.trim().toLowerCase();
+    return leads.filter((l) => {
+      if (fFuente && l.fuente !== fFuente) return false;
+      if (fValor === "con" && !(typeof l.valorEstimado === "number" && l.valorEstimado > 0)) return false;
+      if (fValor === "sin" && typeof l.valorEstimado === "number" && l.valorEstimado > 0) return false;
+      if (!dentroDe(l.creado ?? l.actualizado, fFecha)) return false;
+      if (
+        term &&
+        !l.nombre.toLowerCase().includes(term) &&
+        !(l.interes ?? "").toLowerCase().includes(term)
+      )
+        return false;
+      return true;
+    });
+  }, [leads, q, fFuente, fValor, fFecha]);
+
+  const hayFiltros = q || fFuente || fValor || fFecha !== "todo";
 
   async function mover(leadId: string, etapa: string) {
     setLeads((ls) => ls.map((l) => (l.id === leadId ? { ...l, etapa } : l)));
@@ -80,26 +122,67 @@ export default function Kanban() {
             detalle y editarla.
           </p>
         </div>
-        <div className="con-head-actions">
-          {isAdmin && (
-            <select className="con-select" value={filtro} onChange={(e) => setFiltro(e.target.value)}>
-              <option value="">Todos los clientes</option>
-              {tenants.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.nombre}
-                </option>
-              ))}
-            </select>
-          )}
-          <button className="btn-primary-lg btn-md" onClick={() => setNuevo(true)}>
-            + Lead
-          </button>
-        </div>
       </header>
+
+      <div className="filterbar">
+        <div className="filter-search">
+          {IconSearch}
+          <input
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="Buscar por nombre o interés…"
+          />
+        </div>
+        {isAdmin && (
+          <select className="con-select" value={filtro} onChange={(e) => setFiltro(e.target.value)} aria-label="Cliente">
+            <option value="">Todos los clientes</option>
+            {tenants.map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.nombre}
+              </option>
+            ))}
+          </select>
+        )}
+        <select className="con-select" value={fFuente} onChange={(e) => setFFuente(e.target.value)} aria-label="Fuente">
+          <option value="">Toda fuente</option>
+          {fuentes.map((f) => (
+            <option key={f} value={f}>
+              {f}
+            </option>
+          ))}
+        </select>
+        <select className="con-select" value={fValor} onChange={(e) => setFValor(e.target.value)} aria-label="Valor">
+          <option value="">Todo valor</option>
+          <option value="con">Con valor</option>
+          <option value="sin">Sin valor</option>
+        </select>
+        <select className="con-select" value={fFecha} onChange={(e) => setFFecha(e.target.value)} aria-label="Fecha">
+          <option value="todo">Cualquier fecha</option>
+          <option value="7d">7 días</option>
+          <option value="30d">30 días</option>
+          <option value="90d">90 días</option>
+        </select>
+        {hayFiltros && (
+          <button
+            className="filter-clear"
+            onClick={() => {
+              setQ("");
+              setFFuente("");
+              setFValor("");
+              setFFecha("todo");
+            }}
+          >
+            Limpiar
+          </button>
+        )}
+        <button className="btn-primary-lg btn-md filter-create" onClick={() => setNuevo(true)}>
+          + Oportunidad
+        </button>
+      </div>
 
       <div className="kb">
         {ETAPAS.map((col) => {
-          const items = leads.filter((l) => l.etapa === col.key);
+          const items = visibles.filter((l) => l.etapa === col.key);
           const total = items.reduce((s, l) => s + (l.valorEstimado ?? 0), 0);
           return (
             <div
@@ -336,7 +419,7 @@ function NuevoLead({
     <div className="modal-bg" onClick={onClose}>
       <div className="drawer panel" onClick={(e) => e.stopPropagation()}>
         <div className="modal-head">
-          <h2>Nuevo lead</h2>
+          <h2>Nueva oportunidad</h2>
           <button className="cb-del" onClick={onClose}>
             ×
           </button>
@@ -382,7 +465,7 @@ function NuevoLead({
         {error && <div className="modal-error">⚠️ {error}</div>}
         <div className="cb-actions">
           <button className="btn-primary-lg" onClick={crear} disabled={guardando}>
-            {guardando ? "Creando…" : "Crear lead"}
+            {guardando ? "Creando…" : "Crear oportunidad"}
           </button>
         </div>
       </div>

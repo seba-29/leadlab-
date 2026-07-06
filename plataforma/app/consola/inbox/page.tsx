@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useAccount, scopedUrl } from "../_account/AccountContext";
 
 type ConvItem = {
@@ -17,6 +17,14 @@ type ConvItem = {
   ultimoAutor: string | null;
 };
 type Mensaje = { id: string; autor: "cliente" | "bot" | "humano"; texto: string; creado: string };
+type TenantMin = { id: string; nombre: string };
+
+const IconSearch = (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <circle cx="11" cy="11" r="7" />
+    <path d="M21 21l-4-4" />
+  </svg>
+);
 
 function hace(iso: string): string {
   const ms = Date.now() - new Date(iso).getTime();
@@ -29,10 +37,23 @@ function hace(iso: string): string {
   return d === 1 ? "ayer" : `hace ${d} días`;
 }
 
+function dentroDe(iso: string, rango: string): boolean {
+  if (rango === "todo") return true;
+  const t = new Date(iso).getTime();
+  if (rango === "hoy") return new Date(iso).toDateString() === new Date().toDateString();
+  const dias = rango === "7d" ? 7 : 30;
+  return t >= Date.now() - dias * 86400000;
+}
+
 export default function Inbox() {
   const { scope, isAdmin, tenants } = useAccount();
   const [convs, setConvs] = useState<ConvItem[]>([]);
-  const [filtro, setFiltro] = useState("");
+  const [filtroTenant, setFiltroTenant] = useState("");
+  const [q, setQ] = useState("");
+  const [fEstado, setFEstado] = useState("");
+  const [fCanal, setFCanal] = useState("");
+  const [fFecha, setFFecha] = useState("todo");
+  const [nuevo, setNuevo] = useState(false);
   const [selId, setSelId] = useState<string | null>(null);
   const [mensajes, setMensajes] = useState<Mensaje[]>([]);
   const [conv, setConv] = useState<ConvItem | null>(null);
@@ -40,7 +61,7 @@ export default function Inbox() {
   const [enviando, setEnviando] = useState(false);
   const endRef = useRef<HTMLDivElement>(null);
 
-  async function cargarLista(tid: string | null = isAdmin ? filtro || null : scope) {
+  async function cargarLista(tid: string | null = isAdmin ? filtroTenant || null : scope) {
     const d = await fetch(scopedUrl("/api/conversaciones", tid)).then((r) => r.json());
     setConvs(d.conversaciones ?? []);
   }
@@ -55,7 +76,7 @@ export default function Inbox() {
 
   useEffect(() => {
     cargarLista();
-  }, [filtro, scope]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [filtroTenant, scope]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!selId) return;
@@ -68,10 +89,28 @@ export default function Inbox() {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [mensajes]);
 
+  const visibles = useMemo(() => {
+    const term = q.trim().toLowerCase();
+    return convs.filter((c) => {
+      if (fEstado && c.estado !== fEstado) return false;
+      if (fCanal && c.canal !== fCanal) return false;
+      if (!dentroDe(c.actualizado, fFecha)) return false;
+      if (
+        term &&
+        !c.contactoNombre.toLowerCase().includes(term) &&
+        !c.ultimoMensaje.toLowerCase().includes(term)
+      )
+        return false;
+      return true;
+    });
+  }, [convs, q, fEstado, fCanal, fFecha]);
+
+  const hayFiltros = q || fEstado || fCanal || fFecha !== "todo";
+
   async function accion(a: "tomar" | "soltar" | "responder") {
     if (!selId) return;
     setEnviando(true);
-    const body: any = { accion: a };
+    const body: Record<string, unknown> = { accion: a };
     if (a === "responder") {
       if (!texto.trim()) {
         setEnviando(false);
@@ -102,8 +141,24 @@ export default function Inbox() {
               : "Tus conversaciones. Toma una para pausar el agente y responder tú."}
           </p>
         </div>
+      </header>
+
+      <div className="filterbar">
+        <div className="filter-search">
+          {IconSearch}
+          <input
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="Buscar por contacto o mensaje…"
+          />
+        </div>
         {isAdmin && (
-          <select className="con-select" value={filtro} onChange={(e) => setFiltro(e.target.value)}>
+          <select
+            className="con-select"
+            value={filtroTenant}
+            onChange={(e) => setFiltroTenant(e.target.value)}
+            aria-label="Cliente"
+          >
             <option value="">Todos los clientes</option>
             {tenants.map((t) => (
               <option key={t.id} value={t.id}>
@@ -112,12 +167,49 @@ export default function Inbox() {
             ))}
           </select>
         )}
-      </header>
+        <select className="con-select" value={fEstado} onChange={(e) => setFEstado(e.target.value)} aria-label="Estado">
+          <option value="">Todas</option>
+          <option value="bot">🤖 Agente</option>
+          <option value="humano">👤 Humano</option>
+          <option value="cerrada">Cerrada</option>
+        </select>
+        <select className="con-select" value={fCanal} onChange={(e) => setFCanal(e.target.value)} aria-label="Canal">
+          <option value="">Todos los canales</option>
+          <option value="whatsapp">WhatsApp</option>
+          <option value="playground">Prueba</option>
+        </select>
+        <select className="con-select" value={fFecha} onChange={(e) => setFFecha(e.target.value)} aria-label="Fecha">
+          <option value="todo">Cualquier fecha</option>
+          <option value="hoy">Hoy</option>
+          <option value="7d">7 días</option>
+          <option value="30d">30 días</option>
+        </select>
+        {hayFiltros && (
+          <button
+            className="filter-clear"
+            onClick={() => {
+              setQ("");
+              setFEstado("");
+              setFCanal("");
+              setFFecha("todo");
+            }}
+          >
+            Limpiar
+          </button>
+        )}
+        <button className="btn-primary-lg btn-md filter-create" onClick={() => setNuevo(true)}>
+          + Nueva conversación
+        </button>
+      </div>
 
       <div className="ib-grid">
         <section className="panel ib-list">
-          {convs.length === 0 && <p className="empty ib-empty">Sin conversaciones aún.</p>}
-          {convs.map((c) => (
+          {visibles.length === 0 && (
+            <p className="empty ib-empty">
+              {convs.length === 0 ? "Sin conversaciones aún." : "Nada coincide con esos filtros."}
+            </p>
+          )}
+          {visibles.map((c) => (
             <button
               key={c.id}
               className={`ib-item ${selId === c.id ? "active" : ""}`}
@@ -136,7 +228,7 @@ export default function Inbox() {
                   {c.ultimoMensaje}
                 </div>
                 <div className="ib-item-meta">
-                  <span className="ib-canal">{c.canal === "whatsapp" ? "WhatsApp" : "Playground"}</span>
+                  <span className="ib-canal">{c.canal === "whatsapp" ? "WhatsApp" : "Prueba"}</span>
                   {isAdmin && <span className="ib-tenant">{c.tenantNombre}</span>}
                   <span className={`estado-pill estado-${c.estado}`}>
                     {c.estado === "bot" ? "🤖 agente" : c.estado === "humano" ? "👤 humano" : "cerrada"}
@@ -161,7 +253,7 @@ export default function Inbox() {
                 <div style={{ flex: 1 }}>
                   <div className="chat-name">{conv.contactoNombre}</div>
                   <div className="chat-status">
-                    {conv.tenantNombre} · {conv.canal === "whatsapp" ? "WhatsApp" : "Playground"}
+                    {conv.tenantNombre} · {conv.canal === "whatsapp" ? "WhatsApp" : "Prueba"}
                     {conv.contactoTelefono ? ` · ${conv.contactoTelefono}` : ""}
                   </div>
                 </div>
@@ -217,6 +309,127 @@ export default function Inbox() {
             </>
           )}
         </section>
+      </div>
+
+      {nuevo && (
+        <NuevaConversacion
+          tenants={tenants}
+          soloTenant={!isAdmin}
+          defaultTenant={(isAdmin ? filtroTenant : scope) || tenants[0]?.id || ""}
+          onClose={() => setNuevo(false)}
+          onCreated={async (id) => {
+            setNuevo(false);
+            await cargarLista();
+            setSelId(id);
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+function NuevaConversacion({
+  tenants,
+  defaultTenant,
+  soloTenant,
+  onClose,
+  onCreated,
+}: {
+  tenants: TenantMin[];
+  defaultTenant: string;
+  soloTenant?: boolean;
+  onClose: () => void;
+  onCreated: (id: string) => void;
+}) {
+  const [f, setF] = useState({
+    tenantId: defaultTenant,
+    contactoNombre: "",
+    contactoTelefono: "",
+    canal: "whatsapp",
+    primerMensaje: "",
+  });
+  const [error, setError] = useState("");
+  const [guardando, setGuardando] = useState(false);
+
+  async function crear() {
+    if (!f.contactoNombre.trim() || !f.tenantId) {
+      setError("El nombre del contacto y el cliente son obligatorios.");
+      return;
+    }
+    setGuardando(true);
+    const d = await fetch("/api/conversaciones", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(f),
+    }).then((r) => r.json());
+    setGuardando(false);
+    if (d.error) {
+      setError(d.error);
+      return;
+    }
+    onCreated(d.conversacion.id);
+  }
+
+  return (
+    <div className="modal-bg" onClick={onClose}>
+      <div className="drawer panel" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-head">
+          <h2>Nueva conversación</h2>
+          <button className="cb-del" onClick={onClose}>
+            ×
+          </button>
+        </div>
+        <p className="modal-hint modal-hint-top">
+          Registrá un contacto que entró por teléfono o en persona. Queda en tu inbox como conversación
+          manual para que le hagas seguimiento.
+        </p>
+        {!soloTenant && (
+          <label className="field">
+            <span>Cliente</span>
+            <select
+              className="con-select drawer-select"
+              value={f.tenantId}
+              onChange={(e) => setF({ ...f, tenantId: e.target.value })}
+            >
+              {tenants.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.nombre}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
+        <div className="cb-row">
+          <label className="field">
+            <span>Nombre del contacto *</span>
+            <input
+              value={f.contactoNombre}
+              onChange={(e) => setF({ ...f, contactoNombre: e.target.value })}
+            />
+          </label>
+          <label className="field">
+            <span>Teléfono</span>
+            <input
+              value={f.contactoTelefono}
+              onChange={(e) => setF({ ...f, contactoTelefono: e.target.value })}
+            />
+          </label>
+        </div>
+        <label className="field">
+          <span>Primer mensaje / nota (opcional)</span>
+          <textarea
+            rows={2}
+            placeholder="Ej: Llamó preguntando por depilación láser, le interesa agendar."
+            value={f.primerMensaje}
+            onChange={(e) => setF({ ...f, primerMensaje: e.target.value })}
+          />
+        </label>
+        {error && <div className="modal-error">⚠️ {error}</div>}
+        <div className="cb-actions">
+          <button className="btn-primary-lg" onClick={crear} disabled={guardando}>
+            {guardando ? "Creando…" : "Crear conversación"}
+          </button>
+        </div>
       </div>
     </div>
   );
