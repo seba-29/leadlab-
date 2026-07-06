@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useAccount } from "../_account/AccountContext";
-import { planClp } from "@/lib/pricing";
+import { planClp, PLAN_CLP, USD_CLP, clpToUsd } from "@/lib/pricing";
 
 type Cerebro = {
   descripcion: string;
@@ -46,10 +46,13 @@ const TABS: { id: Tab; label: string }[] = [
 ];
 
 export default function Configuracion() {
-  const { scope, current, refreshTenants } = useAccount();
+  const { scope, isAdmin, current, refreshTenants } = useAccount();
   const tenantId = scope;
   const [tab, setTab] = useState<Tab>("empresa");
   const [tenant, setTenant] = useState<Tenant | null>(null);
+
+  // El admin ve la configuración de la plataforma (marca, equipo, integraciones).
+  if (isAdmin) return <ConfigAdmin />;
 
   const cargarTenant = useCallback(() => {
     if (!tenantId) {
@@ -512,6 +515,178 @@ function PlanTab({ tenant }: { tenant: Tenant }) {
       <a className="btn-ghost-sm" href="mailto:hola@leadlab.cl?subject=Mi%20plan%20Lead%20Lab">
         Hablar de mi plan
       </a>
+    </div>
+  );
+}
+
+/* ============================================================
+   Configuración de ADMIN (plataforma Lead Lab)
+   ============================================================ */
+const ADMIN_TABS = [
+  { id: "marca", label: "Marca" },
+  { id: "equipo", label: "Equipo" },
+  { id: "integraciones", label: "Integraciones" },
+  { id: "comercial", label: "Comercial" },
+] as const;
+type AdminTab = (typeof ADMIN_TABS)[number]["id"];
+
+function ConfigAdmin() {
+  const { tenants, refreshTenants } = useAccount();
+  const internoId = tenants.find((t) => t.tipo === "interno")?.id ?? "";
+  const [tab, setTab] = useState<AdminTab>("marca");
+  const [tenant, setTenant] = useState<Tenant | null>(null);
+
+  const cargar = useCallback(() => {
+    if (!internoId) return;
+    fetch(`/api/tenants/${internoId}`)
+      .then((r) => r.json())
+      .then((d) => setTenant(d.tenant ?? null))
+      .catch(() => {});
+  }, [internoId]);
+
+  useEffect(() => {
+    cargar();
+  }, [cargar]);
+
+  function reload() {
+    cargar();
+    refreshTenants();
+  }
+
+  return (
+    <div>
+      <header className="con-head">
+        <div>
+          <h1 className="con-title">Configuración</h1>
+          <p className="con-sub">
+            La administración de Lead Lab: tu marca, tu equipo interno, las integraciones y lo comercial.
+          </p>
+        </div>
+      </header>
+
+      <div className="tabbar">
+        {ADMIN_TABS.map((t) => (
+          <button key={t.id} className={tab === t.id ? "on" : ""} onClick={() => setTab(t.id)}>
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {tab === "marca" &&
+        (tenant && internoId ? (
+          <MiEmpresa tenant={tenant} tenantId={internoId} reload={reload} />
+        ) : (
+          <div className="con-loading">Cargando…</div>
+        ))}
+      {tab === "equipo" &&
+        (internoId ? (
+          <MiPersonal tenantId={internoId} />
+        ) : (
+          <div className="con-loading">Cargando…</div>
+        ))}
+      {tab === "integraciones" && <EstadoIntegraciones />}
+      {tab === "comercial" && <Comercial />}
+    </div>
+  );
+}
+
+/* ---------- Integraciones (estado de la plataforma) ---------- */
+function EstadoIntegraciones() {
+  const [e, setE] = useState<{
+    claude: boolean;
+    supabase: boolean;
+    auth: boolean;
+    email: boolean;
+    whatsapp: boolean;
+    emailFrom: string;
+    model: string;
+  } | null>(null);
+
+  useEffect(() => {
+    fetch("/api/admin/estado")
+      .then((r) => r.json())
+      .then(setE)
+      .catch(() => {});
+  }, []);
+
+  if (!e) return <div className="con-loading">Cargando estado…</div>;
+
+  const filas = [
+    { nombre: "Claude · IA de los agentes", desc: `Motor de los agentes · modelo ${e.model}`, ok: e.claude },
+    { nombre: "Supabase · base de datos", desc: "Persistencia real de cuentas, leads y conversaciones.", ok: e.supabase },
+    { nombre: "Login con 2FA", desc: "Acceso con clave + código al correo (Supabase Auth).", ok: e.auth },
+    {
+      nombre: "Correo · Resend",
+      desc: e.emailFrom ? `Remitente: ${e.emailFrom}` : "Código de login y notificaciones por correo.",
+      ok: e.email,
+    },
+    { nombre: "WhatsApp Cloud API", desc: "Recepción y envío de mensajes de WhatsApp.", ok: e.whatsapp },
+  ];
+
+  return (
+    <div className="panel cb-panel">
+      <div className="agente-block-title">Estado de la plataforma</div>
+      <p className="agente-cap-desc" style={{ marginBottom: 14 }}>
+        Qué está conectado ahora mismo. Las credenciales viven en variables de entorno del servidor —
+        nunca se muestran ni se guardan acá.
+      </p>
+      <div className="integ-canales">
+        {filas.map((f) => (
+          <div key={f.nombre} className="integ-row">
+            <div>
+              <div className="integ-row-name">{f.nombre}</div>
+              <div className="integ-row-desc">{f.desc}</div>
+            </div>
+            <span className={`estado-pill canal-estado ${f.ok ? "conectado" : "pendiente"}`}>
+              {f.ok ? "Conectado" : "Pendiente"}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* ---------- Comercial (planes, tipo de cambio, margen) ---------- */
+function Comercial() {
+  const planUsd = clpToUsd(PLAN_CLP.cliente);
+  return (
+    <div className="cb-grid">
+      <div className="panel cb-panel">
+        <div className="agente-block-title">Planes y tipo de cambio</div>
+        <div className="agente-kv">
+          <div className="agente-kv-row">
+            <span className="k">Plan Cliente</span>
+            <span className="v">{CLP.format(PLAN_CLP.cliente)}/mes</span>
+          </div>
+          <div className="agente-kv-row">
+            <span className="k">Plan Interno</span>
+            <span className="v">Sin costo</span>
+          </div>
+          <div className="agente-kv-row">
+            <span className="k">Tipo de cambio</span>
+            <span className="v">USD 1 = {CLP.format(USD_CLP)}</span>
+          </div>
+          <div className="agente-kv-row">
+            <span className="k">Plan Cliente en USD</span>
+            <span className="v">≈ ${planUsd.toFixed(2)}</span>
+          </div>
+        </div>
+        <p className="agente-cap-desc" style={{ marginTop: 14 }}>
+          Con estos valores se calcula el <strong>MRR</strong> y el <strong>margen</strong> de cada
+          cliente (lo que cobrás en USD − lo que gastás en tokens de Claude). Hoy están definidos en el
+          código (<code>lib/pricing.ts</code>); la edición self-service llega pronto.
+        </p>
+      </div>
+      <div className="panel cb-panel">
+        <div className="agente-block-title">Cómo se calcula el margen</div>
+        <p className="agente-cap-desc">
+          Margen = precio del plan (USD) − costo de IA del mes. Un cliente entra{" "}
+          <strong>en riesgo</strong> cuando el margen es negativo, cuando no tuvo conversaciones en 7
+          días, o cuando acumula 3+ derivaciones sin atender. Todo eso aparece en el Dashboard, en
+          “Necesitan tu ojo hoy”.
+        </p>
+      </div>
     </div>
   );
 }
