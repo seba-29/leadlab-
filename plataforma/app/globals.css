@@ -2444,6 +2444,14 @@ body {
   font-weight: 700;
   padding-left: 0.4em;
 }
+/* El placeholder no debe heredar el tracking gigante del código:
+   con 0.4em se cortaba y "Código del correo" quedaba ilegible. */
+.field input.login-code::placeholder {
+  letter-spacing: normal;
+  font-size: 14px;
+  font-weight: 500;
+  padding-left: 0;
+}
 .login-links {
   display: flex;
   justify-content: space-between;
