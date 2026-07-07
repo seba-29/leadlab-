@@ -42,5 +42,20 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ tenant: actualizado ?? tenant }, { status: 201 });
   }
 
+  // Con cerebro provisto (ej. rellenado desde una web): sembrar servicios/faq/reglas.
+  const c = body?.cerebro;
+  if (c && (Array.isArray(c.servicios) || Array.isArray(c.faq) || typeof c.reglas === "string")) {
+    const cerebro = {
+      descripcion: tenant.cerebro.descripcion,
+      tono: tenant.cerebro.tono,
+      horario: tenant.cerebro.horario,
+      servicios: Array.isArray(c.servicios) ? c.servicios : tenant.cerebro.servicios,
+      faq: Array.isArray(c.faq) ? c.faq : tenant.cerebro.faq,
+      reglas: typeof c.reglas === "string" && c.reglas ? c.reglas : tenant.cerebro.reglas,
+    };
+    const actualizado = await updateCerebro(tenant.id, cerebro);
+    return NextResponse.json({ tenant: actualizado ?? tenant }, { status: 201 });
+  }
+
   return NextResponse.json({ tenant }, { status: 201 });
 }

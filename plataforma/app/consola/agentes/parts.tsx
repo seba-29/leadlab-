@@ -313,6 +313,58 @@ export function NuevoAgente({
   const [error, setError] = useState("");
   const [guardando, setGuardando] = useState(false);
 
+  // Crear desde la web: la IA lee el sitio y arma la ficha (servicios, FAQ…).
+  const [url, setUrl] = useState("");
+  const [analizando, setAnalizando] = useState(false);
+  const [aviso, setAviso] = useState("");
+  const [tono, setTono] = useState("");
+  const [extra, setExtra] = useState<{ servicios: Servicio[]; faq: Faq[]; reglas: string }>({
+    servicios: [],
+    faq: [],
+    reglas: "",
+  });
+
+  async function analizarUrl() {
+    if (!url.trim()) return;
+    setAnalizando(true);
+    setError("");
+    setAviso("");
+    try {
+      const d = await fetch("/api/agentes/desde-url", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url }),
+      }).then((r) => r.json());
+      if (d.error) {
+        setError(d.error);
+      } else {
+        const f = d.ficha ?? {};
+        setForm((prev) => ({
+          ...prev,
+          nombre: f.nombre || prev.nombre,
+          agente: f.agente || prev.agente,
+          rubro: f.rubro || prev.rubro,
+          descripcion: f.descripcion || prev.descripcion,
+          horario: f.horario || prev.horario,
+        }));
+        if (typeof f.tono === "string") setTono(f.tono);
+        setExtra({
+          servicios: Array.isArray(f.servicios) ? f.servicios : [],
+          faq: Array.isArray(f.faq) ? f.faq : [],
+          reglas: typeof f.reglas === "string" ? f.reglas : "",
+        });
+        const ns = Array.isArray(f.servicios) ? f.servicios.length : 0;
+        const nf = Array.isArray(f.faq) ? f.faq.length : 0;
+        setAviso(
+          `✓ Ficha lista: ${ns} servicio${ns === 1 ? "" : "s"} y ${nf} pregunta${nf === 1 ? "" : "s"}. Revísala y crea el agente.`,
+        );
+      }
+    } catch {
+      setError("No pudimos analizar el sitio. Intenta de nuevo.");
+    }
+    setAnalizando(false);
+  }
+
   async function crear() {
     if (!form.nombre.trim() || !form.agente.trim() || !form.rubro.trim()) {
       setError("Completa al menos negocio, nombre del agente y rubro.");
@@ -323,7 +375,7 @@ export function NuevoAgente({
     const d = await fetch("/api/tenants", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(form),
+      body: JSON.stringify({ ...form, tono, cerebro: extra }),
     }).then((r) => r.json());
     setGuardando(false);
     if (d.error) {
@@ -342,6 +394,36 @@ export function NuevoAgente({
             ×
           </button>
         </div>
+
+        <div className="url-fill">
+          <div className="url-fill-label">⚡ Crear desde la web</div>
+          <p className="url-fill-desc">
+            Pega el sitio del negocio y la IA arma la ficha (servicios, precios, preguntas) en segundos.
+            Ideal para armar demos.
+          </p>
+          <div className="url-fill-row">
+            <input
+              placeholder="clinicaejemplo.cl"
+              value={url}
+              onChange={(e) => setUrl(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  analizarUrl();
+                }
+              }}
+            />
+            <button
+              className="btn-primary-lg btn-md"
+              onClick={analizarUrl}
+              disabled={analizando || !url.trim()}
+            >
+              {analizando ? "Analizando…" : "Rellenar"}
+            </button>
+          </div>
+          {aviso && <div className="url-fill-ok">{aviso}</div>}
+        </div>
+
         <div className="cb-row">
           <label className="field">
             <span>Negocio *</span>
@@ -793,7 +875,7 @@ export function FichaAgente({ tenant, cerebro }: { tenant: AgenteBase; cerebro: 
       </div>
 
       <div className="agente-nota">
-        Para cambiar precios, servicios o reglas de {tenant.agente}, escribinos y lo actualizamos — la
+        Para cambiar precios, servicios o reglas de {tenant.agente}, escríbenos y lo actualizamos — la
         edición self-service llega pronto.
       </div>
     </div>
