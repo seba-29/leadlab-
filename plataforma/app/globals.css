@@ -629,6 +629,34 @@ body {
   margin-top: 7px;
 }
 
+/* ---- Skeleton de carga (shimmer) ---- */
+.sk {
+  position: relative;
+  overflow: hidden;
+  background: var(--card);
+  border: 1px solid var(--glass-brd);
+  border-radius: var(--radius);
+}
+.sk::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, var(--hover), transparent);
+  transform: translateX(-100%);
+  animation: sk 1.15s infinite;
+}
+@keyframes sk {
+  to {
+    transform: translateX(100%);
+  }
+}
+.sk-tile {
+  height: 94px;
+}
+.sk-card {
+  height: 150px;
+}
+
 /* ---- Dashboard ---- */
 .dash-grid {
   display: grid;

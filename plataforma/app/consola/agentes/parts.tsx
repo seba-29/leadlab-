@@ -77,7 +77,14 @@ export function FlotaAgentes() {
       .catch(() => setClientes([]));
   }, []);
 
-  if (!clientes) return <div className="con-loading">Cargando agentes…</div>;
+  if (!clientes)
+    return (
+      <div className="flota-grid">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div key={i} className="sk sk-card" />
+        ))}
+      </div>
+    );
   if (clientes.length === 0) {
     return (
       <div className="panel ag-empty">

@@ -325,7 +325,15 @@ function VistaGlobalContenido() {
       .catch(() => {});
   }, []);
 
-  if (!g) return <div className="con-loading">Cargando vista global…</div>;
+  if (!g) {
+    return (
+      <div className="tiles">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <div key={i} className="sk sk-tile" />
+        ))}
+      </div>
+    );
+  }
   const t = g.totales;
   const pct = t.margenPct != null ? `${Math.round(t.margenPct * 100)}% de lo que cobras` : "—";
 
