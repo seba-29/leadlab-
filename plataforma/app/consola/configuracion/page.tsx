@@ -342,7 +342,7 @@ function Integraciones({ tenant }: { tenant: Tenant }) {
             <p>
               Tu <strong>portafolio de Meta</strong> (Business Manager) verificado y el número de
               WhatsApp Business. Con eso enlazamos WhatsApp Cloud API y los mensajes de IG/FB. Te
-              guiamos paso a paso — escribinos y lo dejamos andando.
+              guiamos paso a paso — escríbenos y lo dejamos funcionando.
             </p>
             <div className="onboard-preview-tags">
               <span className="pill">Meta Business</span>
@@ -674,7 +674,7 @@ function Comercial() {
         </div>
         <p className="agente-cap-desc" style={{ marginTop: 14 }}>
           Con estos valores se calcula el <strong>MRR</strong> y el <strong>margen</strong> de cada
-          cliente (lo que cobrás en USD − lo que gastás en tokens de Claude). Hoy están definidos en el
+          cliente (lo que cobras en USD − lo que gastas en tokens de Claude). Hoy están definidos en el
           código (<code>lib/pricing.ts</code>); la edición self-service llega pronto.
         </p>
       </div>

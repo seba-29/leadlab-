@@ -394,7 +394,7 @@ function Alertas({
     [];
   for (const c of clientes) {
     if (c.tipo === "cliente" && c.margenPct != null && c.margenPct < 0) {
-      alertas.push({ id: c.id, nombre: c.nombre, color: c.color, tono: "rojo", msg: "Margen negativo — gastás más de lo que cobrás" });
+      alertas.push({ id: c.id, nombre: c.nombre, color: c.color, tono: "rojo", msg: "Margen negativo — gastas más de lo que cobras" });
     } else if (c.tipo === "cliente" && c.conv7d === 0) {
       alertas.push({ id: c.id, nombre: c.nombre, color: c.color, tono: "rojo", msg: "0 conversaciones en 7 días — cliente inactivo" });
     } else if (c.derivacionesPend >= 3) {

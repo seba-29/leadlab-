@@ -87,7 +87,7 @@ function ClienteAgentes() {
         <div>
           <h1 className="con-title">Agentes IA</h1>
           <p className="con-sub">
-            Probá tu agente en vivo y revisá su ficha: lo que sabe y lo que puede hacer por vos.
+            Prueba tu agente en vivo y revisa su ficha: lo que sabe y lo que puede hacer por ti.
           </p>
         </div>
       </header>
