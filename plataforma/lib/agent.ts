@@ -44,7 +44,7 @@ async function contabilizar(tenantId: string, model: string, usage: Anthropic.Us
 export type ChatMessage = { role: "user" | "assistant"; content: string };
 export type AgentResult = { reply: string; events: string[] };
 
-const DEFAULT_MODEL = process.env.AGENT_MODEL || "claude-opus-4-8";
+export const DEFAULT_MODEL = process.env.AGENT_MODEL || "claude-opus-4-8";
 
 // ---------- prompt por tenant ----------
 
@@ -92,7 +92,7 @@ ${c.reglas}
 
 // ---------- herramientas ----------
 
-const tools: Anthropic.Tool[] = [
+export const tools: Anthropic.Tool[] = [
   {
     name: "capturar_lead",
     description:

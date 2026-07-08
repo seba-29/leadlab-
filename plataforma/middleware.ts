@@ -10,7 +10,9 @@ function exenta(path: string): boolean {
   return (
     path === "/login" ||
     path.startsWith("/api/auth/") || // endpoints de login
-    path.startsWith("/api/canales/") // webhook de Meta
+    path.startsWith("/api/canales/") || // webhook de Meta
+    path.startsWith("/demo/") || // demo pública para prospectos
+    path.startsWith("/api/demo/") // chat de la demo pública
   );
 }
 

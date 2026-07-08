@@ -2839,6 +2839,148 @@ body {
   font-weight: 600;
 }
 
+/* ============================================================
+   Demo pública (/demo/[id]) — chat que le mandas al prospecto
+   ============================================================ */
+.demo-shell {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 20px 16px;
+  background: radial-gradient(1100px 560px at 50% -10%, rgba(255, 107, 44, 0.13), transparent),
+    var(--bg, #0b0a09);
+}
+.demo-card {
+  width: 100%;
+  max-width: 440px;
+  height: min(82dvh, 740px);
+  display: flex;
+  flex-direction: column;
+  background: var(--surface, rgba(255, 255, 255, 0.02));
+  border: 1px solid var(--glass-brd, rgba(255, 255, 255, 0.09));
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(16px);
+}
+.demo-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--glass-brd);
+  background: var(--glass, rgba(255, 255, 255, 0.04));
+}
+.demo-avatar {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+  font-size: 17px;
+  color: #1a0d06;
+  flex: 0 0 42px;
+}
+.demo-head-info {
+  min-width: 0;
+}
+.demo-name {
+  font-weight: 700;
+  font-size: 15px;
+  color: var(--text);
+}
+.demo-sub {
+  font-size: 12px;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.demo-msgs {
+  flex: 1;
+  overflow-y: auto;
+  padding: 18px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.demo-events {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 4px 0;
+}
+.demo-event {
+  align-self: center;
+  font-size: 11.5px;
+  color: var(--t-lime, #c6f24e);
+  background: rgba(198, 242, 78, 0.1);
+  border: 1px solid rgba(198, 242, 78, 0.25);
+  border-radius: 100px;
+  padding: 4px 12px;
+}
+.demo-composer {
+  display: flex;
+  gap: 8px;
+  padding: 12px;
+  border-top: 1px solid var(--glass-brd);
+  background: var(--glass);
+}
+.demo-composer textarea {
+  flex: 1;
+  resize: none;
+  background: var(--field-bg);
+  border: 1px solid var(--glass-brd);
+  border-radius: 12px;
+  padding: 11px 13px;
+  color: var(--text);
+  font-family: inherit;
+  font-size: 14px;
+  outline: none;
+  max-height: 120px;
+  line-height: 1.4;
+}
+.demo-composer textarea:focus {
+  border-color: rgba(255, 107, 44, 0.5);
+}
+.demo-composer button {
+  background: linear-gradient(135deg, var(--orange), var(--orange-soft));
+  color: #1a0d06;
+  border: none;
+  border-radius: 12px;
+  padding: 0 18px;
+  font-weight: 700;
+  font-family: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+.demo-composer button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.demo-badge {
+  font-size: 12px;
+  color: var(--faint);
+  text-decoration: none;
+  text-align: center;
+  max-width: 440px;
+  line-height: 1.5;
+}
+.demo-badge strong {
+  color: var(--muted);
+  font-weight: 700;
+}
+.demo-badge-b {
+  color: var(--orange);
+}
+
 /* Alertas del dashboard admin ("a quién llamar hoy") */
 .alerta-item {
   width: 100%;
