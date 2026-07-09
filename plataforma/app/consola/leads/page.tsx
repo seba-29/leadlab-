@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useAccount, scopedUrl } from "../_account/AccountContext";
+import { Dropdown } from "../_components/Dropdown";
+import { canalDe, CANALES } from "@/lib/canales";
 
 type Lead = {
   id: string;
@@ -49,12 +51,24 @@ const CLP = new Intl.NumberFormat("es-CL", {
   maximumFractionDigits: 0,
 });
 
+function CanalChip({ fuente }: { fuente: string }) {
+  const c = canalDe(fuente);
+  return (
+    <span
+      className="canal-chip"
+      style={{ color: c.color, borderColor: `${c.color}55`, background: `${c.color}1a` }}
+    >
+      {c.label}
+    </span>
+  );
+}
+
 export default function Kanban() {
   const { scope, isAdmin, tenants } = useAccount();
   const [leads, setLeads] = useState<Lead[]>([]);
   const [filtro, setFiltro] = useState<string>("");
   const [q, setQ] = useState("");
-  const [fFuente, setFFuente] = useState("");
+  const [fCanal, setFCanal] = useState("");
   const [fValor, setFValor] = useState("");
   const [fFecha, setFFecha] = useState("todo");
   const [dragId, setDragId] = useState<string | null>(null);
@@ -73,15 +87,15 @@ export default function Kanban() {
     cargar();
   }, [filtro, scope]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const fuentes = useMemo(
-    () => Array.from(new Set(leads.map((l) => l.fuente).filter(Boolean))).sort(),
-    [leads],
-  );
+  const canalesPresentes = useMemo(() => {
+    const keys = Array.from(new Set(leads.map((l) => canalDe(l.fuente).key)));
+    return CANALES.filter((c) => keys.includes(c.key));
+  }, [leads]);
 
   const visibles = useMemo(() => {
     const term = q.trim().toLowerCase();
     return leads.filter((l) => {
-      if (fFuente && l.fuente !== fFuente) return false;
+      if (fCanal && canalDe(l.fuente).key !== fCanal) return false;
       if (fValor === "con" && !(typeof l.valorEstimado === "number" && l.valorEstimado > 0)) return false;
       if (fValor === "sin" && typeof l.valorEstimado === "number" && l.valorEstimado > 0) return false;
       if (!dentroDe(l.creado ?? l.actualizado, fFecha)) return false;
@@ -93,9 +107,9 @@ export default function Kanban() {
         return false;
       return true;
     });
-  }, [leads, q, fFuente, fValor, fFecha]);
+  }, [leads, q, fCanal, fValor, fFecha]);
 
-  const hayFiltros = q || fFuente || fValor || fFecha !== "todo";
+  const hayFiltros = q || fCanal || fValor || fFecha !== "todo";
 
   async function mover(leadId: string, etapa: string) {
     setLeads((ls) => ls.map((l) => (l.id === leadId ? { ...l, etapa } : l)));
@@ -134,40 +148,59 @@ export default function Kanban() {
           />
         </div>
         {isAdmin && (
-          <select className="con-select" value={filtro} onChange={(e) => setFiltro(e.target.value)} aria-label="Cliente">
-            <option value="">Todos los clientes</option>
-            {tenants.map((t) => (
-              <option key={t.id} value={t.id}>
-                {t.nombre}
-              </option>
-            ))}
-          </select>
+          <Dropdown
+            compact
+            ariaLabel="Cliente"
+            value={filtro}
+            onChange={setFiltro}
+            placeholder="Todos los clientes"
+            options={[
+              { value: "", label: "Todos los clientes" },
+              ...tenants.map((t) => ({ value: t.id, label: t.nombre })),
+            ]}
+          />
         )}
-        <select className="con-select" value={fFuente} onChange={(e) => setFFuente(e.target.value)} aria-label="Fuente">
-          <option value="">Toda fuente</option>
-          {fuentes.map((f) => (
-            <option key={f} value={f}>
-              {f}
-            </option>
-          ))}
-        </select>
-        <select className="con-select" value={fValor} onChange={(e) => setFValor(e.target.value)} aria-label="Valor">
-          <option value="">Todo valor</option>
-          <option value="con">Con valor</option>
-          <option value="sin">Sin valor</option>
-        </select>
-        <select className="con-select" value={fFecha} onChange={(e) => setFFecha(e.target.value)} aria-label="Fecha">
-          <option value="todo">Cualquier fecha</option>
-          <option value="7d">7 días</option>
-          <option value="30d">30 días</option>
-          <option value="90d">90 días</option>
-        </select>
+        <Dropdown
+          compact
+          ariaLabel="Canal de origen"
+          value={fCanal}
+          onChange={setFCanal}
+          placeholder="Todo canal"
+          options={[
+            { value: "", label: "Todo canal" },
+            ...canalesPresentes.map((c) => ({ value: c.key, label: c.label, color: c.color })),
+          ]}
+        />
+        <Dropdown
+          compact
+          ariaLabel="Valor"
+          value={fValor}
+          onChange={setFValor}
+          placeholder="Todo valor"
+          options={[
+            { value: "", label: "Todo valor" },
+            { value: "con", label: "Con valor" },
+            { value: "sin", label: "Sin valor" },
+          ]}
+        />
+        <Dropdown
+          compact
+          ariaLabel="Fecha"
+          value={fFecha}
+          onChange={setFFecha}
+          options={[
+            { value: "todo", label: "Cualquier fecha" },
+            { value: "7d", label: "7 días" },
+            { value: "30d", label: "30 días" },
+            { value: "90d", label: "90 días" },
+          ]}
+        />
         {hayFiltros && (
           <button
             className="filter-clear"
             onClick={() => {
               setQ("");
-              setFFuente("");
+              setFCanal("");
               setFValor("");
               setFFecha("todo");
             }}
@@ -224,7 +257,8 @@ export default function Kanban() {
                     )}
                     <div className="kb-card-meta">
                       {isAdmin && <span className="kb-dot" style={{ background: l.tenantColor }} />}
-                      {isAdmin ? `${l.tenantNombre} · ${l.fuente}` : l.fuente}
+                      {isAdmin && <span className="kb-card-tenant">{l.tenantNombre}</span>}
+                      <CanalChip fuente={l.fuente} />
                     </div>
                   </div>
                 ))}
@@ -309,8 +343,8 @@ function LeadDrawer({
           </button>
         </div>
         <div className="drawer-meta">
-          <span className="kb-dot" style={{ background: lead.tenantColor }} /> {lead.tenantNombre} ·{" "}
-          {lead.fuente}
+          <span className="kb-dot" style={{ background: lead.tenantColor }} /> {lead.tenantNombre}
+          <CanalChip fuente={lead.fuente} />
           {lead.conversacionId && (
             <a className="drawer-link" href="/consola/inbox">
               Ver conversación →
@@ -340,20 +374,14 @@ function LeadDrawer({
               onChange={(e) => setF({ ...f, valorEstimado: e.target.value })}
             />
           </label>
-          <label className="field">
+          <div className="field">
             <span>Etapa</span>
-            <select
-              className="con-select drawer-select"
+            <Dropdown
               value={f.etapa}
-              onChange={(e) => setF({ ...f, etapa: e.target.value })}
-            >
-              {ETAPAS.map((e2) => (
-                <option key={e2.key} value={e2.key}>
-                  {e2.label}
-                </option>
-              ))}
-            </select>
-          </label>
+              onChange={(v) => setF({ ...f, etapa: v })}
+              options={ETAPAS.map((e2) => ({ value: e2.key, label: e2.label }))}
+            />
+          </div>
         </div>
         <label className="field">
           <span>Notas</span>
@@ -388,6 +416,7 @@ function NuevoLead({
     telefono: "",
     interes: "",
     valorEstimado: "",
+    fuente: "WhatsApp",
     notas: "",
   });
   const [error, setError] = useState("");
@@ -425,20 +454,14 @@ function NuevoLead({
           </button>
         </div>
         {!soloTenant && (
-          <label className="field">
+          <div className="field">
             <span>Cliente</span>
-            <select
-              className="con-select drawer-select"
+            <Dropdown
               value={f.tenantId}
-              onChange={(e) => setF({ ...f, tenantId: e.target.value })}
-            >
-              {tenants.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.nombre}
-                </option>
-              ))}
-            </select>
-          </label>
+              onChange={(v) => setF({ ...f, tenantId: v })}
+              options={tenants.map((t) => ({ value: t.id, label: t.nombre }))}
+            />
+          </div>
         )}
         <div className="cb-row">
           <label className="field">
@@ -454,14 +477,24 @@ function NuevoLead({
           <span>Interés</span>
           <input value={f.interes} onChange={(e) => setF({ ...f, interes: e.target.value })} />
         </label>
-        <label className="field">
-          <span>Valor estimado (CLP)</span>
-          <input
-            type="number"
-            value={f.valorEstimado}
-            onChange={(e) => setF({ ...f, valorEstimado: e.target.value })}
-          />
-        </label>
+        <div className="cb-row">
+          <label className="field">
+            <span>Valor estimado (CLP)</span>
+            <input
+              type="number"
+              value={f.valorEstimado}
+              onChange={(e) => setF({ ...f, valorEstimado: e.target.value })}
+            />
+          </label>
+          <div className="field">
+            <span>Origen del lead</span>
+            <Dropdown
+              value={f.fuente}
+              onChange={(v) => setF({ ...f, fuente: v })}
+              options={CANALES.map((c) => ({ value: c.label, label: c.label, color: c.color }))}
+            />
+          </div>
+        </div>
         {error && <div className="modal-error">⚠️ {error}</div>}
         <div className="cb-actions">
           <button className="btn-primary-lg" onClick={crear} disabled={guardando}>

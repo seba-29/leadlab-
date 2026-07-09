@@ -1848,6 +1848,61 @@ body {
   font-size: 12px;
   flex: none;
 }
+.gsel-lbl {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+  font-weight: 550;
+}
+.gsel-ico {
+  display: inline-flex;
+  width: 15px;
+  height: 15px;
+  flex: none;
+  color: var(--muted);
+}
+.gsel-ico svg {
+  width: 100%;
+  height: 100%;
+}
+.gsel-hint {
+  font-size: 11px;
+  color: var(--faint);
+  flex: none;
+  font-variant-numeric: tabular-nums;
+}
+.gsel.compact {
+  display: inline-flex;
+  width: auto;
+}
+.gsel.compact .gsel-btn {
+  width: auto;
+  padding: 8px 10px 8px 11px;
+  gap: 7px;
+  border-radius: 10px;
+}
+.gsel.compact .gsel-lbl {
+  font-size: 12.5px;
+  font-weight: 600;
+}
+.gsel.compact .gsel-pop {
+  min-width: 200px;
+  right: auto;
+}
+.canal-chip {
+  display: inline-flex;
+  align-items: center;
+  font-size: 10.5px;
+  font-weight: 650;
+  padding: 2px 7px;
+  border-radius: 6px;
+  border: 1px solid;
+  line-height: 1.45;
+  white-space: nowrap;
+}
 .ag-tag.rol-tag {
   color: var(--text);
   border: 1px solid var(--glass-brd);
