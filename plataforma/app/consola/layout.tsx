@@ -153,41 +153,122 @@ function Sidebar() {
 }
 
 function AccountSwitcher() {
-  const { cuentaActiva, tenants, entrarComo, volverAAdmin } = useAccount();
+  const { cuentaActiva, tenants, entrarComo, volverAAdmin, logos } = useAccount();
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    function onDown(e: PointerEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setOpen(false);
+    }
+    document.addEventListener("pointerdown", onDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("pointerdown", onDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
 
   const ordenados = [...tenants].sort((a, b) => {
     if (a.tipo !== b.tipo) return a.tipo === "interno" ? -1 : 1;
     return a.nombre.localeCompare(b.nombre);
   });
+  const activo = cuentaActiva === "admin" ? null : tenants.find((t) => t.id === cuentaActiva) ?? null;
+  const activoLogo = activo ? logos[activo.id] : undefined;
+
+  function pick(id: string) {
+    if (id === "admin") volverAAdmin();
+    else entrarComo(id);
+    setOpen(false);
+  }
 
   return (
-    <div className="con-switch">
-      <div className="con-user">
-        <div className="con-user-avatar">LL</div>
-        <div>
-          <div className="con-user-name">Lead Lab</div>
-          <div className="con-user-role">Admin · global</div>
-        </div>
-      </div>
-      {tenants.length > 0 && (
-        <select
-          className="con-select con-switch-select"
-          value={cuentaActiva}
-          onChange={(e) =>
-            e.target.value === "admin" ? volverAAdmin() : entrarComo(e.target.value)
-          }
-          aria-label="Cambiar de cuenta"
+    <div className="con-switch" ref={ref}>
+      <button
+        className={`con-switch-btn${open ? " open" : ""}`}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        aria-label="Cambiar de cuenta"
+        onClick={() => setOpen((v) => !v)}
+      >
+        {activo && activoLogo ? (
+          <span className="con-switch-av">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img className="con-logo-img" src={activoLogo} alt="" />
+          </span>
+        ) : (
+          <span
+            className="con-switch-av"
+            style={activo ? { background: activo.color, color: "#1a0d06" } : undefined}
+          >
+            {activo ? activo.agente?.[0] ?? activo.nombre[0] ?? "?" : "LL"}
+          </span>
+        )}
+        <span className="con-switch-id">
+          <span className="con-switch-name">{activo ? activo.nombre : "Lead Lab"}</span>
+          <span className="con-switch-role">
+            {activo ? "Viendo como subcuenta" : "Admin · vista global"}
+          </span>
+        </span>
+        <svg
+          className="con-switch-chev"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
         >
-          <option value="admin">★ Admin · vista global</option>
-          <optgroup label="Entrar como subcuenta">
-            {ordenados.map((t) => (
-              <option key={t.id} value={t.id}>
+          <path d="M6 9l6 6 6-6" />
+        </svg>
+      </button>
+
+      {open && (
+        <div className="con-switch-pop" role="listbox">
+          <button
+            role="option"
+            aria-selected={cuentaActiva === "admin"}
+            className={`con-switch-opt${cuentaActiva === "admin" ? " on" : ""}`}
+            onClick={() => pick("admin")}
+          >
+            <span className="con-switch-star" aria-hidden>
+              ★
+            </span>
+            <span className="con-switch-optxt">Admin · vista global</span>
+            {cuentaActiva === "admin" && (
+              <span className="con-switch-check" aria-hidden>
+                ✓
+              </span>
+            )}
+          </button>
+
+          {ordenados.length > 0 && (
+            <div className="con-switch-label">Entrar como subcuenta</div>
+          )}
+
+          {ordenados.map((t) => (
+            <button
+              key={t.id}
+              role="option"
+              aria-selected={cuentaActiva === t.id}
+              className={`con-switch-opt${cuentaActiva === t.id ? " on" : ""}`}
+              onClick={() => pick(t.id)}
+            >
+              <span className="con-switch-dot" style={{ background: t.color }} />
+              <span className="con-switch-optxt">
                 {t.nombre}
-                {t.tipo === "interno" ? " (interno)" : ""}
-              </option>
-            ))}
-          </optgroup>
-        </select>
+                {t.tipo === "interno" && <span className="con-switch-tag">interno</span>}
+              </span>
+              {cuentaActiva === t.id && (
+                <span className="con-switch-check" aria-hidden>
+                  ✓
+                </span>
+              )}
+            </button>
+          ))}
+        </div>
       )}
     </div>
   );

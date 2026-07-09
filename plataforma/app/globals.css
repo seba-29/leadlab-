@@ -531,15 +531,18 @@ body {
     padding: 8px 10px;
   }
   .con-switch {
-    flex-direction: row;
-    align-items: center;
     margin: 0;
+    flex: none;
   }
-  .con-switch .con-user {
+  .con-switch-btn {
+    width: auto;
+  }
+  .con-switch-role {
     display: none;
   }
-  .con-switch-select {
-    width: auto;
+  .con-switch-pop {
+    right: auto;
+    min-width: 230px;
   }
   .con-sidebar-tail {
     flex-direction: row;
@@ -1545,17 +1548,183 @@ body {
   padding: 4px 12px 2px;
 }
 
-/* ---- Switcher de cuenta (pie del sidebar) ---- */
+/* ---- Switcher de cuenta (menú propio, glass) ---- */
 .con-switch {
+  position: relative;
+  margin: 2px 0 14px;
+}
+.con-switch-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 8px 11px 8px 8px;
+  border-radius: 12px;
+  border: 1px solid var(--glass-brd);
+  background: var(--field-bg);
+  color: var(--text);
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+.con-switch-btn:hover {
+  background: var(--hover);
+  border-color: rgba(255, 107, 44, 0.32);
+}
+.con-switch-btn.open {
+  border-color: rgba(255, 107, 44, 0.5);
+  background: var(--hover);
+}
+.con-switch-av {
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  flex: none;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  font-weight: 700;
+  font-size: 12px;
+  color: #1a0d06;
+  background: linear-gradient(135deg, var(--lime), #a8d63a);
+}
+.con-switch-av .con-logo-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.con-switch-id {
+  flex: 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  margin-bottom: 12px;
+  gap: 1px;
 }
-.con-switch-select {
+.con-switch-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.con-switch-role {
+  font-size: 10px;
+  color: var(--faint);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.con-switch-chev {
+  width: 15px;
+  height: 15px;
+  flex: none;
+  color: var(--faint);
+  transition: transform 0.18s ease, color 0.18s ease;
+}
+.con-switch-btn.open .con-switch-chev {
+  transform: rotate(180deg);
+  color: var(--t-orange);
+}
+.con-switch-pop {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  z-index: 50;
+  padding: 6px;
+  border-radius: 14px;
+  border: 1px solid var(--glass-brd);
+  background: var(--panel-solid);
+  backdrop-filter: blur(20px) saturate(1.4);
+  -webkit-backdrop-filter: blur(20px) saturate(1.4);
+  box-shadow: 0 20px 46px rgba(0, 0, 0, 0.44), 0 3px 10px rgba(0, 0, 0, 0.3);
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  animation: switchpop 0.16s ease;
+}
+@keyframes switchpop {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.con-switch-label {
+  font-size: 9.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--faint);
+  padding: 9px 10px 4px;
+}
+.con-switch-opt {
+  display: flex;
+  align-items: center;
+  gap: 9px;
   width: 100%;
+  padding: 9px 10px;
+  border: none;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--text);
+  font-family: inherit;
+  font-size: 12.5px;
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.13s;
+}
+.con-switch-opt:hover {
+  background: var(--hover);
+}
+.con-switch-opt.on {
+  background: linear-gradient(120deg, rgba(255, 107, 44, 0.18), rgba(204, 120, 92, 0.07));
+}
+.con-switch-optxt {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.con-switch-star {
+  color: var(--t-yellow);
   font-size: 12px;
-  padding: 8px 10px;
+  line-height: 1;
+  flex: none;
+  width: 10px;
+  text-align: center;
+}
+.con-switch-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex: none;
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.06);
+}
+.con-switch-tag {
+  font-size: 8.5px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--faint);
+  border: 1px solid var(--glass-brd);
+  padding: 1px 5px;
+  border-radius: 5px;
+  flex: none;
+}
+.con-switch-check {
+  color: var(--t-orange);
+  font-size: 12px;
+  font-weight: 800;
+  flex: none;
 }
 .con-user.is-client .con-user-avatar {
   color: #1a0d06;
