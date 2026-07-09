@@ -12,6 +12,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useAccount } from "../_account/AccountContext";
+import { USD_CLP, MARKUP_TOKENS_DEFAULT } from "@/lib/pricing";
 
 // ---- Tipos ----
 export type Servicio = { nombre: string; precio: string; detalle?: string };
@@ -62,6 +63,19 @@ const USD = new Intl.NumberFormat("en-US", {
   currency: "USD",
   maximumFractionDigits: 2,
 });
+const CLP = new Intl.NumberFormat("es-CL", {
+  style: "currency",
+  currency: "CLP",
+  maximumFractionDigits: 0,
+});
+
+function modeloFriendly(m?: string): string {
+  const s = (m || "").toLowerCase();
+  if (s.includes("sonnet")) return "Claude Sonnet 5";
+  if (s.includes("haiku")) return "Claude Haiku 4.5";
+  if (s.includes("opus")) return "Claude Opus";
+  return "Claude";
+}
 
 // ============================================================
 // FLOTA — overview de todos los agentes (admin)
@@ -157,6 +171,10 @@ export function Tester({ tenant }: { tenant: AgenteBase }) {
   const [convId, setConvId] = useState<string | undefined>(undefined);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [rated, setRated] = useState<Record<number, "up" | "down">>({});
+  const [feedbackFor, setFeedbackFor] = useState<number | null>(null);
+  const [fbText, setFbText] = useState("");
+  const [correcciones, setCorrecciones] = useState<{ pregunta: string; deberia: string }[]>([]);
   const endRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -200,6 +218,22 @@ export function Tester({ tenant }: { tenant: AgenteBase }) {
     setMessages([]);
     setEvents([]);
     setConvId(undefined);
+    setRated({});
+    setFeedbackFor(null);
+  }
+
+  function calificar(i: number, up: boolean) {
+    setRated((r) => ({ ...r, [i]: up ? "up" : "down" }));
+    setFeedbackFor(up ? null : i);
+  }
+
+  function guardarCorreccion(i: number) {
+    if (!fbText.trim()) return;
+    const pregunta = messages[i - 1]?.content ?? "";
+    setCorrecciones((c) => [{ pregunta, deberia: fbText.trim() }, ...c]);
+    setRated((r) => ({ ...r, [i]: "down" }));
+    setFbText("");
+    setFeedbackFor(null);
   }
 
   return (
@@ -223,8 +257,46 @@ export function Tester({ tenant }: { tenant: AgenteBase }) {
         <div className="messages">
           <div className="bubble assistant">{greeting}</div>
           {messages.map((m, i) => (
-            <div key={i} className={`bubble ${m.role === "user" ? "user" : "assistant"}`}>
-              {m.content}
+            <div key={i} className={`bubble-wrap ${m.role === "user" ? "u" : "a"}`}>
+              <div className={`bubble ${m.role === "user" ? "user" : "assistant"}`}>{m.content}</div>
+              {m.role === "assistant" && (
+                <div className="rate">
+                  <button
+                    className={`rate-btn ${rated[i] === "up" ? "on" : ""}`}
+                    title="Buena respuesta"
+                    onClick={() => calificar(i, true)}
+                  >
+                    👍
+                  </button>
+                  <button
+                    className={`rate-btn ${rated[i] === "down" ? "on down" : ""}`}
+                    title="Se puede mejorar"
+                    onClick={() => calificar(i, false)}
+                  >
+                    👎
+                  </button>
+                  {rated[i] === "up" && <span className="rate-note">¡Gracias!</span>}
+                  {rated[i] === "down" && feedbackFor !== i && <span className="rate-note">Anotado ✍️</span>}
+                </div>
+              )}
+              {feedbackFor === i && (
+                <div className="rate-fb">
+                  <textarea
+                    value={fbText}
+                    onChange={(e) => setFbText(e.target.value)}
+                    rows={2}
+                    placeholder="¿Qué debió responder? Esto afina al agente."
+                  />
+                  <div className="rate-fb-actions">
+                    <button className="btn-ghost-sm" onClick={() => setFeedbackFor(null)}>
+                      Cancelar
+                    </button>
+                    <button className="btn-primary-lg btn-md" onClick={() => guardarCorreccion(i)}>
+                      Guardar corrección
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           ))}
           {loading && (
@@ -285,6 +357,25 @@ export function Tester({ tenant }: { tenant: AgenteBase }) {
                 <li key={i}>{e}</li>
               ))}
             </ul>
+          )}
+        </div>
+        <div className="panel side-block">
+          <div className="side-title">
+            Correcciones <span className="pill">{correcciones.length}</span>
+          </div>
+          {correcciones.length === 0 ? (
+            <p className="empty">
+              Califica cada respuesta con 👍 / 👎. Tus correcciones afinan cómo responde el agente.
+            </p>
+          ) : (
+            <div className="correcciones">
+              {correcciones.map((c, i) => (
+                <div key={i} className="correccion">
+                  {c.pregunta && <div className="correccion-q">“{c.pregunta}”</div>}
+                  <div className="correccion-d">✍️ {c.deberia}</div>
+                </div>
+              ))}
+            </div>
           )}
         </div>
       </aside>
@@ -758,6 +849,17 @@ const IconDerivar = (
 // FICHA AGENTE — cara CLIENTE (lectura amable, nunca expone el prompt)
 // ============================================================
 export function FichaAgente({ tenant, cerebro }: { tenant: AgenteBase; cerebro: Cerebro | null }) {
+  const [datos, setDatos] = useState<{ model: string; costoUsd: number } | null>(null);
+  useEffect(() => {
+    fetch("/api/admin/clientes")
+      .then((r) => r.json())
+      .then((d) => {
+        const row = (d.clientes ?? []).find((c: { id: string }) => c.id === tenant.id);
+        if (row) setDatos({ model: row.model, costoUsd: row.costoUsd });
+      })
+      .catch(() => {});
+  }, [tenant.id]);
+
   const caps = [
     {
       icon: IconCapturar,
@@ -777,6 +879,9 @@ export function FichaAgente({ tenant, cerebro }: { tenant: AgenteBase; cerebro: 
   ];
   const servicios = (cerebro?.servicios ?? []).filter((s) => s.nombre);
   const faq = (cerebro?.faq ?? []).filter((f) => f.pregunta);
+  const modelo = modeloFriendly(datos?.model);
+  const costoMes = (datos?.costoUsd ?? 0) * USD_CLP;
+  const cobrado = costoMes * (1 + MARKUP_TOKENS_DEFAULT);
 
   return (
     <div className="agente-ficha">
@@ -800,7 +905,7 @@ export function FichaAgente({ tenant, cerebro }: { tenant: AgenteBase; cerebro: 
       </div>
 
       <div className="panel agente-block">
-        <div className="agente-block-title">Lo que puede hacer</div>
+        <div className="agente-block-title">Acciones y movimientos en el CRM</div>
         <div className="agente-caps">
           {caps.map((c) => (
             <div key={c.name} className="agente-cap">
@@ -815,6 +920,34 @@ export function FichaAgente({ tenant, cerebro }: { tenant: AgenteBase; cerebro: 
             </div>
           ))}
         </div>
+      </div>
+
+      <div className="panel agente-block">
+        <div className="agente-block-title">Motor de IA</div>
+        <div className="agente-kv">
+          <div className="agente-kv-row">
+            <span className="k">Modelo</span>
+            <span className="v">{modelo}</span>
+          </div>
+          {datos && (
+            <>
+              <div className="agente-kv-row">
+                <span className="k">Consumo de IA (mes)</span>
+                <span className="v">{CLP.format(Math.round(costoMes))}</span>
+              </div>
+              <div className="agente-kv-row">
+                <span className="k">Se factura al cliente</span>
+                <span className="v" style={{ color: "var(--t-lime)" }}>
+                  {CLP.format(Math.round(cobrado))}
+                </span>
+              </div>
+            </>
+          )}
+        </div>
+        <p className="agente-cap-desc" style={{ marginTop: 10 }}>
+          Facturación transparente: el consumo real de IA + {Math.round(MARKUP_TOKENS_DEFAULT * 100)}% de
+          servicio.
+        </p>
       </div>
 
       {(cerebro?.tono || cerebro?.horario) && (
@@ -837,22 +970,27 @@ export function FichaAgente({ tenant, cerebro }: { tenant: AgenteBase; cerebro: 
         </div>
       )}
 
-      {servicios.length > 0 && (
-        <div className="panel agente-block">
-          <div className="agente-block-title">Lo que sabe · servicios y precios</div>
-          <div className="agente-kv">
+      <div className="panel agente-block">
+        <div className="agente-block-title">Base de conocimiento</div>
+        <p className="agente-cap-desc" style={{ marginBottom: servicios.length ? 12 : 0 }}>
+          Los temas con los que responde{servicios.length ? "" : " se cargan desde su cerebro"}.
+        </p>
+        {servicios.length > 0 && (
+          <div className="kb-tags">
             {servicios.map((s, i) => (
-              <div key={i} className="agente-kv-row">
-                <span className="k">
-                  {s.nombre}
-                  {s.detalle ? ` — ${s.detalle}` : ""}
-                </span>
-                <span className="v">{s.precio}</span>
-              </div>
+              <span key={i} className="kb-tag">
+                {s.nombre}
+              </span>
             ))}
           </div>
+        )}
+        <div className="agente-kv" style={{ marginTop: servicios.length ? 14 : 0 }}>
+          <div className="agente-kv-row">
+            <span className="k">Reglas</span>
+            <span className="v">{cerebro?.reglas ? "Personalizadas" : "Base"}</span>
+          </div>
         </div>
-      )}
+      </div>
 
       {faq.length > 0 && (
         <div className="panel agente-block">
@@ -869,14 +1007,14 @@ export function FichaAgente({ tenant, cerebro }: { tenant: AgenteBase; cerebro: 
       )}
 
       <div className="agente-salud">
-        <span className="pill">Servicios: {servicios.length}</span>
+        <span className="pill">Base: {servicios.length} temas</span>
         <span className="pill">FAQ: {faq.length}</span>
-        <span className="pill">{cerebro?.reglas ? "Reglas definidas" : "Reglas base"}</span>
+        <span className="pill">{cerebro?.reglas ? "Reglas propias" : "Reglas base"}</span>
       </div>
 
       <div className="agente-nota">
-        Para cambiar precios, servicios o reglas de {tenant.agente}, escríbenos y lo actualizamos — la
-        edición self-service llega pronto.
+        Para ajustar el conocimiento, las acciones o las reglas de {tenant.agente}, escríbenos y lo
+        actualizamos.
       </div>
     </div>
   );

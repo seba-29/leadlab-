@@ -165,7 +165,7 @@ function seed(): DB {
     rubro: "Clínica estética",
     tipo: "cliente",
     color: "#F472B6",
-    model: "claude-opus-4-8",
+    model: "claude-sonnet-5",
     plan: "crm",
     cerebro: {
       descripcion:
@@ -460,7 +460,7 @@ function seed(): DB {
     rubro,
     tipo: "cliente",
     color,
-    model: tLead.model,
+    model: "claude-sonnet-5",
     plan,
     cerebro: { descripcion: rubro, tono: "", horario: "", servicios: [], faq: [], reglas: "" },
   });

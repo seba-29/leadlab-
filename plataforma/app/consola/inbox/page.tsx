@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useAccount, scopedUrl } from "../_account/AccountContext";
+import { Dropdown } from "../_components/Dropdown";
 
 type ConvItem = {
   id: string;
@@ -43,6 +44,24 @@ function dentroDe(iso: string, rango: string): boolean {
   if (rango === "hoy") return new Date(iso).toDateString() === new Date().toDateString();
   const dias = rango === "7d" ? 7 : 30;
   return t >= Date.now() - dias * 86400000;
+}
+
+const CANAL_CONV: Record<string, { label: string; color: string }> = {
+  whatsapp: { label: "WhatsApp", color: "#25D366" },
+  instagram: { label: "Instagram", color: "#E1306C" },
+  messenger: { label: "Facebook", color: "#1877F2" },
+  playground: { label: "Prueba", color: "#9a938c" },
+};
+function CanalChip({ canal }: { canal: string }) {
+  const ch = CANAL_CONV[canal] ?? { label: canal, color: "#9a938c" };
+  return (
+    <span
+      className="canal-chip"
+      style={{ color: ch.color, borderColor: `${ch.color}55`, background: `${ch.color}1a` }}
+    >
+      {ch.label}
+    </span>
+  );
 }
 
 export default function Inbox() {
@@ -153,37 +172,57 @@ export default function Inbox() {
           />
         </div>
         {isAdmin && (
-          <select
-            className="con-select"
+          <Dropdown
+            compact
+            ariaLabel="Cliente"
             value={filtroTenant}
-            onChange={(e) => setFiltroTenant(e.target.value)}
-            aria-label="Cliente"
-          >
-            <option value="">Todos los clientes</option>
-            {tenants.map((t) => (
-              <option key={t.id} value={t.id}>
-                {t.nombre}
-              </option>
-            ))}
-          </select>
+            onChange={setFiltroTenant}
+            placeholder="Todos los clientes"
+            options={[
+              { value: "", label: "Todos los clientes" },
+              ...tenants.map((t) => ({ value: t.id, label: t.nombre })),
+            ]}
+          />
         )}
-        <select className="con-select" value={fEstado} onChange={(e) => setFEstado(e.target.value)} aria-label="Estado">
-          <option value="">Todas</option>
-          <option value="bot">🤖 Agente</option>
-          <option value="humano">👤 Humano</option>
-          <option value="cerrada">Cerrada</option>
-        </select>
-        <select className="con-select" value={fCanal} onChange={(e) => setFCanal(e.target.value)} aria-label="Canal">
-          <option value="">Todos los canales</option>
-          <option value="whatsapp">WhatsApp</option>
-          <option value="playground">Prueba</option>
-        </select>
-        <select className="con-select" value={fFecha} onChange={(e) => setFFecha(e.target.value)} aria-label="Fecha">
-          <option value="todo">Cualquier fecha</option>
-          <option value="hoy">Hoy</option>
-          <option value="7d">7 días</option>
-          <option value="30d">30 días</option>
-        </select>
+        <Dropdown
+          compact
+          ariaLabel="Estado"
+          value={fEstado}
+          onChange={setFEstado}
+          placeholder="Todas"
+          options={[
+            { value: "", label: "Todas" },
+            { value: "bot", label: "🤖 Agente" },
+            { value: "humano", label: "👤 Humano" },
+            { value: "cerrada", label: "Cerrada" },
+          ]}
+        />
+        <Dropdown
+          compact
+          ariaLabel="Canal"
+          value={fCanal}
+          onChange={setFCanal}
+          placeholder="Todos los canales"
+          options={[
+            { value: "", label: "Todos los canales" },
+            { value: "whatsapp", label: "WhatsApp", color: "#25D366" },
+            { value: "instagram", label: "Instagram", color: "#E1306C" },
+            { value: "messenger", label: "Facebook", color: "#1877F2" },
+            { value: "playground", label: "Prueba", color: "#9a938c" },
+          ]}
+        />
+        <Dropdown
+          compact
+          ariaLabel="Fecha"
+          value={fFecha}
+          onChange={setFFecha}
+          options={[
+            { value: "todo", label: "Cualquier fecha" },
+            { value: "hoy", label: "Hoy" },
+            { value: "7d", label: "7 días" },
+            { value: "30d", label: "30 días" },
+          ]}
+        />
         {hayFiltros && (
           <button
             className="filter-clear"
@@ -198,7 +237,7 @@ export default function Inbox() {
           </button>
         )}
         <button className="btn-primary-lg btn-md filter-create" onClick={() => setNuevo(true)}>
-          + Nueva conversación
+          + Nuevo contacto
         </button>
       </div>
 
@@ -228,7 +267,7 @@ export default function Inbox() {
                   {c.ultimoMensaje}
                 </div>
                 <div className="ib-item-meta">
-                  <span className="ib-canal">{c.canal === "whatsapp" ? "WhatsApp" : "Prueba"}</span>
+                  <CanalChip canal={c.canal} />
                   {isAdmin && <span className="ib-tenant">{c.tenantNombre}</span>}
                   <span className={`estado-pill estado-${c.estado}`}>
                     {c.estado === "bot" ? "🤖 agente" : c.estado === "humano" ? "👤 humano" : "cerrada"}
@@ -253,7 +292,7 @@ export default function Inbox() {
                 <div style={{ flex: 1 }}>
                   <div className="chat-name">{conv.contactoNombre}</div>
                   <div className="chat-status">
-                    {conv.tenantNombre} · {conv.canal === "whatsapp" ? "WhatsApp" : "Prueba"}
+                    {conv.tenantNombre} <CanalChip canal={conv.canal} />
                     {conv.contactoTelefono ? ` · ${conv.contactoTelefono}` : ""}
                   </div>
                 </div>
@@ -374,30 +413,24 @@ function NuevaConversacion({
     <div className="modal-bg" onClick={onClose}>
       <div className="drawer panel" onClick={(e) => e.stopPropagation()}>
         <div className="modal-head">
-          <h2>Nueva conversación</h2>
+          <h2>Nuevo contacto</h2>
           <button className="cb-del" onClick={onClose}>
             ×
           </button>
         </div>
         <p className="modal-hint modal-hint-top">
-          Registrá un contacto que entró por teléfono o en persona. Queda en tu inbox como conversación
-          manual para que le hagas seguimiento.
+          Agrega un contacto que entró por teléfono o en persona. Queda en tu inbox para que le hagas
+          seguimiento.
         </p>
         {!soloTenant && (
-          <label className="field">
+          <div className="field">
             <span>Cliente</span>
-            <select
-              className="con-select drawer-select"
+            <Dropdown
               value={f.tenantId}
-              onChange={(e) => setF({ ...f, tenantId: e.target.value })}
-            >
-              {tenants.map((t) => (
-                <option key={t.id} value={t.id}>
-                  {t.nombre}
-                </option>
-              ))}
-            </select>
-          </label>
+              onChange={(v) => setF({ ...f, tenantId: v })}
+              options={tenants.map((t) => ({ value: t.id, label: t.nombre }))}
+            />
+          </div>
         )}
         <div className="cb-row">
           <label className="field">
@@ -427,7 +460,7 @@ function NuevaConversacion({
         {error && <div className="modal-error">⚠️ {error}</div>}
         <div className="cb-actions">
           <button className="btn-primary-lg" onClick={crear} disabled={guardando}>
-            {guardando ? "Creando…" : "Crear conversación"}
+            {guardando ? "Creando…" : "Crear contacto"}
           </button>
         </div>
       </div>
