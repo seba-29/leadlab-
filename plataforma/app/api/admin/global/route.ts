@@ -6,7 +6,7 @@ import {
   listUsos,
   listDerivaciones,
 } from "@/lib/store";
-import { planClp, margen } from "@/lib/pricing";
+import { planClpDe, margen } from "@/lib/pricing";
 
 export const dynamic = "force-dynamic";
 
@@ -65,7 +65,8 @@ export async function GET() {
       ganados,
       derivacionesPend,
       costoUsd,
-      planClp: planClp(t.tipo),
+      plan: t.tipo === "cliente" ? t.plan ?? "crm" : undefined,
+      planClp: planClpDe(t),
       margenPct: m.margenPct,
       salud,
       spark,

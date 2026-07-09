@@ -16,7 +16,7 @@ export async function POST(req: NextRequest, { params }: Params) {
   const body = await req.json();
   const nombre = String(body?.nombre ?? "").trim();
   const correo = String(body?.correo ?? "").trim().toLowerCase();
-  const rol = body?.rol === "dueno" ? "dueno" : "equipo";
+  const rol = ["admin", "ejecutivo", "marketing"].includes(body?.rol) ? body.rol : "ejecutivo";
   if (!nombre || !correo) {
     return NextResponse.json({ error: "Nombre y correo son obligatorios" }, { status: 400 });
   }

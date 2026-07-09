@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useAccount } from "../_account/AccountContext";
-import { planClp, PLAN_CLP, USD_CLP, clpToUsd } from "@/lib/pricing";
+import { planClp, USD_CLP, PLANES, MARKUP_TOKENS_DEFAULT } from "@/lib/pricing";
 
 type Cerebro = {
   descripcion: string;
@@ -27,7 +27,7 @@ type Miembro = {
   id: string;
   nombre: string;
   correo: string;
-  rol: "dueno" | "equipo";
+  rol: RolKey;
   estado: string;
 };
 type Tab = "empresa" | "integraciones" | "personal" | "plan";
@@ -376,13 +376,86 @@ function Integraciones({ tenant }: { tenant: Tenant }) {
   );
 }
 
+/* ---------- Roles del equipo ---------- */
+const ROLES = [
+  { key: "admin", label: "Admin", desc: "Acceso total a la cuenta" },
+  { key: "ejecutivo", label: "Ejecutivo", desc: "Inbox, leads y agenda" },
+  { key: "marketing", label: "Marketing", desc: "Campañas y métricas" },
+] as const;
+type RolKey = (typeof ROLES)[number]["key"];
+
+function RolePicker({ value, onChange }: { value: RolKey; onChange: (r: RolKey) => void }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    function onDown(e: PointerEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") setOpen(false);
+    }
+    document.addEventListener("pointerdown", onDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("pointerdown", onDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+  const cur = ROLES.find((r) => r.key === value) ?? ROLES[1];
+  return (
+    <div className="gsel" ref={ref}>
+      <button
+        type="button"
+        className={`gsel-btn${open ? " open" : ""}`}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        onClick={() => setOpen((v) => !v)}
+      >
+        <span className={`gsel-badge rol-${cur.key}`} />
+        <span className="gsel-cur">
+          <b>{cur.label}</b>
+          <small>{cur.desc}</small>
+        </span>
+        <svg className="gsel-chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <path d="M6 9l6 6 6-6" />
+        </svg>
+      </button>
+      {open && (
+        <div className="gsel-pop" role="listbox">
+          {ROLES.map((r) => (
+            <button
+              type="button"
+              key={r.key}
+              role="option"
+              aria-selected={r.key === value}
+              className={`gsel-opt${r.key === value ? " on" : ""}`}
+              onClick={() => {
+                onChange(r.key);
+                setOpen(false);
+              }}
+            >
+              <span className={`gsel-badge rol-${r.key}`} />
+              <span className="gsel-optxt">
+                <b>{r.label}</b>
+                <small>{r.desc}</small>
+              </span>
+              {r.key === value && <span className="gsel-check">✓</span>}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 /* ---------- Mi personal ---------- */
 function MiPersonal({ tenantId }: { tenantId: string }) {
   const [usuarios, setUsuarios] = useState<Miembro[]>([]);
-  const [form, setForm] = useState<{ nombre: string; correo: string; rol: "dueno" | "equipo" }>({
+  const [form, setForm] = useState<{ nombre: string; correo: string; rol: RolKey }>({
     nombre: "",
     correo: "",
-    rol: "equipo",
+    rol: "ejecutivo",
   });
   const [error, setError] = useState("");
 
@@ -412,7 +485,7 @@ function MiPersonal({ tenantId }: { tenantId: string }) {
       setError(d.error);
       return;
     }
-    setForm({ nombre: "", correo: "", rol: "equipo" });
+    setForm({ nombre: "", correo: "", rol: "ejecutivo" });
     cargar();
   }
 
@@ -440,8 +513,8 @@ function MiPersonal({ tenantId }: { tenantId: string }) {
                   <div className="equipo-nombre">{u.nombre}</div>
                   <div className="equipo-correo">{u.correo}</div>
                 </div>
-                <span className={`ag-tag ${u.rol === "dueno" ? "interno" : "cliente"}`}>
-                  {u.rol === "dueno" ? "Dueño" : "Equipo"}
+                <span className={`ag-tag rol-tag rol-${u.rol}`}>
+                  {ROLES.find((r) => r.key === u.rol)?.label ?? u.rol}
                 </span>
                 <span className="estado-pill canal-estado pendiente">
                   {u.estado === "activo" ? "Activo" : "Invitación pendiente"}
@@ -476,14 +549,7 @@ function MiPersonal({ tenantId }: { tenantId: string }) {
         </label>
         <label className="field">
           <span>Rol</span>
-          <select
-            className="con-select drawer-select"
-            value={form.rol}
-            onChange={(e) => setForm({ ...form, rol: e.target.value as "dueno" | "equipo" })}
-          >
-            <option value="equipo">Equipo — responde y gestiona</option>
-            <option value="dueno">Dueño — acceso total</option>
-          </select>
+          <RolePicker value={form.rol} onChange={(r) => setForm({ ...form, rol: r })} />
         </label>
         {error && <div className="modal-error">⚠️ {error}</div>}
         <div className="cb-actions">
@@ -647,45 +713,185 @@ function EstadoIntegraciones() {
   );
 }
 
-/* ---------- Comercial (planes, tipo de cambio, margen) ---------- */
+/* ---------- Comercial (dashboard de ejecutivo) ---------- */
+type ClienteRow = {
+  id: string;
+  nombre: string;
+  color: string;
+  tipo: string;
+  plan?: string;
+  planClp: number;
+  costoUsd: number;
+  salud: string;
+};
+
 function Comercial() {
-  const planUsd = clpToUsd(PLAN_CLP.cliente);
+  const [data, setData] = useState<{ totales: Record<string, number>; clientes: ClienteRow[] } | null>(
+    null,
+  );
+  const [markup, setMarkup] = useState(MARKUP_TOKENS_DEFAULT);
+
+  useEffect(() => {
+    fetch("/api/admin/global")
+      .then((r) => r.json())
+      .then(setData)
+      .catch(() => {});
+  }, []);
+
+  if (!data) return <div className="con-loading">Cargando datos comerciales…</div>;
+
+  const t = data.totales;
+  const clientes = (data.clientes ?? []).filter((c) => c.tipo === "cliente");
+  const costoClpMes = (t.costoUsdMes ?? 0) * USD_CLP;
+  const markupClp = costoClpMes * markup;
+  const ingresoTotal = (t.mrrClp ?? 0) + markupClp;
+  const tot = ingresoTotal || 1;
+  const margenNeto = ingresoTotal - costoClpMes;
+  const margenPct = ingresoTotal > 0 ? margenNeto / ingresoTotal : 0;
+  const arpu = t.nClientes > 0 ? t.mrrClp / t.nClientes : 0;
+
+  const porPlan = PLANES.map((p) => {
+    const cs = clientes.filter((c) => (c.plan ?? "crm") === p.key);
+    return { ...p, n: cs.length, mrr: cs.reduce((s, c) => s + c.planClp, 0) };
+  });
+  const maxN = Math.max(1, ...porPlan.map((p) => p.n));
+
+  const topCosto = [...clientes].sort((a, b) => b.costoUsd - a.costoUsd).slice(0, 6);
+  const maxCosto = Math.max(0.01, ...topCosto.map((c) => c.costoUsd));
+
+  const kpis = [
+    { label: "MRR", value: CLP.format(t.mrrClp ?? 0), sub: `${t.nClientes ?? 0} clientes · +${t.nuevos30d ?? 0} este mes`, tone: "accent" },
+    { label: "Ingreso extra · tokens", value: CLP.format(Math.round(markupClp)), sub: `markup ${Math.round(markup * 100)}% sobre IA`, tone: "money" },
+    { label: "Ingreso total / mes", value: CLP.format(Math.round(ingresoTotal)), sub: "planes + recarga de tokens", tone: "" },
+    { label: "ARPU", value: CLP.format(Math.round(arpu)), sub: "ingreso promedio por cliente", tone: "" },
+    { label: "Margen neto", value: `${Math.round(margenPct * 100)}%`, sub: `${CLP.format(Math.round(margenNeto))} / mes`, tone: "" },
+  ];
+
   return (
-    <div className="cb-grid">
-      <div className="panel cb-panel">
-        <div className="agente-block-title">Planes y tipo de cambio</div>
-        <div className="agente-kv">
-          <div className="agente-kv-row">
-            <span className="k">Plan Cliente</span>
-            <span className="v">{CLP.format(PLAN_CLP.cliente)}/mes</span>
+    <div className="dash">
+      <div className="dash-kpis">
+        {kpis.map((k) => (
+          <div key={k.label} className={`dash-kpi ${k.tone}`}>
+            <div className="dash-kpi-label">{k.label}</div>
+            <div className="dash-kpi-value">{k.value}</div>
+            <div className="dash-kpi-sub">{k.sub}</div>
           </div>
-          <div className="agente-kv-row">
-            <span className="k">Plan Interno</span>
-            <span className="v">Sin costo</span>
+        ))}
+      </div>
+
+      <div className="dash-grid">
+        <div className="panel dash-card dash-wide">
+          <div className="dash-card-head">
+            <div className="agente-block-title">Composición de ingresos</div>
+            <div className="dash-total">
+              {CLP.format(Math.round(ingresoTotal))}
+              <span>/mes</span>
+            </div>
           </div>
-          <div className="agente-kv-row">
-            <span className="k">Tipo de cambio</span>
-            <span className="v">USD 1 = {CLP.format(USD_CLP)}</span>
+          <div className="stackbar">
+            <div className="stackbar-seg base" style={{ width: `${((t.mrrClp ?? 0) / tot) * 100}%` }} />
+            <div className="stackbar-seg markup" style={{ width: `${(markupClp / tot) * 100}%` }} />
           </div>
-          <div className="agente-kv-row">
-            <span className="k">Plan Cliente en USD</span>
-            <span className="v">≈ ${planUsd.toFixed(2)}</span>
+          <div className="stackbar-legend">
+            <span>
+              <i className="dot base" /> Planes · {CLP.format(t.mrrClp ?? 0)}
+            </span>
+            <span>
+              <i className="dot markup" /> Recarga tokens · {CLP.format(Math.round(markupClp))}
+            </span>
+          </div>
+          <div className="markup-ctl">
+            <div className="markup-ctl-head">
+              <span>Recargo de tokens al cliente</span>
+              <strong>{Math.round(markup * 100)}%</strong>
+            </div>
+            <input
+              type="range"
+              min={0}
+              max={0.6}
+              step={0.05}
+              value={markup}
+              onChange={(e) => setMarkup(Number(e.target.value))}
+            />
+            <p className="agente-cap-desc" style={{ marginTop: 8 }}>
+              Le cobras a cada cliente su consumo de IA + {Math.round(markup * 100)}%. Costo real del mes:{" "}
+              {CLP.format(Math.round(costoClpMes))} → <strong>{CLP.format(Math.round(markupClp))}</strong> extra
+              para ti, sin trabajo adicional.
+            </p>
           </div>
         </div>
-        <p className="agente-cap-desc" style={{ marginTop: 14 }}>
-          Con estos valores se calcula el <strong>MRR</strong> y el <strong>margen</strong> de cada
-          cliente (lo que cobras en USD − lo que gastas en tokens de Claude). Hoy están definidos en el
-          código (<code>lib/pricing.ts</code>); la edición self-service llega pronto.
-        </p>
-      </div>
-      <div className="panel cb-panel">
-        <div className="agente-block-title">Cómo se calcula el margen</div>
-        <p className="agente-cap-desc">
-          Margen = precio del plan (USD) − costo de IA del mes. Un cliente entra{" "}
-          <strong>en riesgo</strong> cuando el margen es negativo, cuando no tuvo conversaciones en 7
-          días, o cuando acumula 3+ derivaciones sin atender. Todo eso aparece en el Dashboard, en
-          “Necesitan tu ojo hoy”.
-        </p>
+
+        <div className="panel dash-card">
+          <div className="agente-block-title">Clientes por plan</div>
+          <div className="planbars">
+            {porPlan.map((p) => (
+              <div key={p.key} className="planbar">
+                <div className="planbar-top">
+                  <span className="planbar-name">
+                    <i className="dot" style={{ background: p.color }} /> {p.corto}
+                  </span>
+                  <span className="planbar-n">{p.n}</span>
+                </div>
+                <div className="planbar-track">
+                  <div className="planbar-fill" style={{ width: `${(p.n / maxN) * 100}%`, background: p.color }} />
+                </div>
+                <div className="planbar-foot">
+                  {CLP.format(p.clp)}/mes · aporta {CLP.format(p.mrr)}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="panel dash-card">
+          <div className="dash-card-head">
+            <div className="agente-block-title">Costo de IA por cliente</div>
+            <div className="dash-total">
+              {CLP.format(Math.round(costoClpMes))}
+              <span>/mes</span>
+            </div>
+          </div>
+          <div className="costlist">
+            {topCosto.map((c) => (
+              <div key={c.id} className="costrow">
+                <span className="costrow-dot" style={{ background: c.color }} />
+                <span className="costrow-name">{c.nombre}</span>
+                <span className="costrow-bar">
+                  <i style={{ width: `${(c.costoUsd / maxCosto) * 100}%`, background: c.color }} />
+                </span>
+                <span className="costrow-val">{CLP.format(Math.round(c.costoUsd * USD_CLP))}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="panel dash-card">
+          <div className="agente-block-title">Cartera</div>
+          <div className="agente-kv">
+            <div className="agente-kv-row">
+              <span className="k">Clientes activos</span>
+              <span className="v">{t.nClientes ?? 0}</span>
+            </div>
+            <div className="agente-kv-row">
+              <span className="k">Nuevos (30 días)</span>
+              <span className="v" style={{ color: "var(--t-green)" }}>+{t.nuevos30d ?? 0}</span>
+            </div>
+            <div className="agente-kv-row">
+              <span className="k">En riesgo</span>
+              <span className="v" style={{ color: (t.enRiesgo ?? 0) > 0 ? "var(--t-orange)" : undefined }}>
+                {t.enRiesgo ?? 0}
+              </span>
+            </div>
+            <div className="agente-kv-row">
+              <span className="k">Leads ganados</span>
+              <span className="v">{t.ganadosTotales ?? 0}</span>
+            </div>
+            <div className="agente-kv-row">
+              <span className="k">Tipo de cambio</span>
+              <span className="v">USD 1 = {CLP.format(USD_CLP)}</span>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );

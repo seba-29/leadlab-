@@ -356,7 +356,7 @@ export async function crearMiembro(input: {
   tenantId: string;
   nombre: string;
   correo: string;
-  rol: "dueno" | "equipo";
+  rol: "admin" | "ejecutivo" | "marketing";
 }): Promise<Miembro> {
   await ensureSeed();
   const { data, error } = await sb()

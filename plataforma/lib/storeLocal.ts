@@ -166,6 +166,7 @@ function seed(): DB {
     tipo: "cliente",
     color: "#F472B6",
     model: "claude-opus-4-8",
+    plan: "crm",
     cerebro: {
       descripcion:
         "Clínica Aurora es una clínica de medicina estética en Providencia, Santiago. Equipo liderado por la Dra. Carolina Fuentes. La primera evaluación es gratuita (15 minutos).",
@@ -444,14 +445,74 @@ function seed(): DB {
     },
   ];
 
+  // ---- Clientes demo extra + costos de IA (para que lo comercial respire) ----
+  const nuevoCliente = (
+    idc: string,
+    nombre: string,
+    agente: string,
+    rubro: string,
+    color: string,
+    plan: "agente" | "crm" | "pro",
+  ): Tenant => ({
+    id: idc,
+    nombre,
+    agente,
+    rubro,
+    tipo: "cliente",
+    color,
+    model: tLead.model,
+    plan,
+    cerebro: { descripcion: rubro, tono: "", horario: "", servicios: [], faq: [], reglas: "" },
+  });
+
+  const extras: Tenant[] = [
+    nuevoCliente("solar-antu", "Antü Solar", "Catalina", "Instalación de paneles solares", "#FFC93F", "pro"),
+    nuevoCliente("clima-sur", "ClimaSur", "Javiera", "Climatización frío-calor", "#5EEAD4", "crm"),
+    nuevoCliente("dental-vitacura", "Dental Vitacura", "Sofía", "Clínica dental", "#93C5FD", "crm"),
+    nuevoCliente("automotora-rc", "Automotora RC", "Benjamín", "Automotora de seminuevos", "#A78BFA", "agente"),
+    nuevoCliente("gimnasio-force", "Gimnasio Force", "Trinidad", "Gimnasio y entrenamiento", "#C6F24E", "agente"),
+  ];
+
+  // Una conversación reciente por cliente demo (para que no salgan "en riesgo").
+  const nombresDemo = ["Rocío P.", "Matías L.", "Fernanda S.", "Diego A.", "Paula M."];
+  extras.forEach((c, i) => {
+    conv(c.id, nombresDemo[i], `+56 9 5${i}22 30${i}1`, "bot", i % 4, 11 + i, [
+      ["cliente", "Hola! Quería cotizar 😊"],
+      ["bot", "¡Hola! Con gusto te ayudo. ¿Me cuentas un poco qué necesitas?"],
+    ]);
+  });
+
+  const usos: UsoEvento[] = [];
+  const sembrarUso = (tid: string, llamadas: number, costoTotalUsd: number) => {
+    for (let i = 0; i < llamadas; i++) {
+      usos.push({
+        id: id("uso"),
+        tenantId: tid,
+        model: tLead.model,
+        tokensIn: 2800 + (i % 7) * 120,
+        tokensInCacheRead: 9000,
+        tokensInCacheWrite: 1100,
+        tokensOut: 520 + (i % 5) * 30,
+        costoUsd: costoTotalUsd / llamadas,
+        creado: haceDias(i % 21, 10 + (i % 8)),
+      });
+    }
+  };
+  sembrarUso("aurora", 42, 18.5);
+  sembrarUso("solar-antu", 61, 31.2);
+  sembrarUso("clima-sur", 37, 15.8);
+  sembrarUso("dental-vitacura", 52, 22.4);
+  sembrarUso("automotora-rc", 26, 12.1);
+  sembrarUso("gimnasio-force", 14, 5.7);
+
   return {
-    tenants: [tLead, tAurora],
+    tenants: [tLead, tAurora, ...extras],
     conversaciones,
     mensajes,
     leads,
     citas,
     derivaciones,
-    usos: [],
+    usos,
     miembros: [],
   };
 }
@@ -569,7 +630,7 @@ export async function crearMiembro(input: {
   tenantId: string;
   nombre: string;
   correo: string;
-  rol: "dueno" | "equipo";
+  rol: "admin" | "ejecutivo" | "marketing";
 }): Promise<Miembro> {
   const m: Miembro = {
     id: id("mbr"),

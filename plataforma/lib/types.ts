@@ -24,6 +24,7 @@ export type Tenant = {
   tipo: "interno" | "cliente";
   color: string; // hex para el avatar
   model: string;
+  plan?: "agente" | "crm" | "pro"; // plan comercial del cliente (default: crm)
   cerebro: Cerebro;
   promptOverride?: string; // si existe, se usa tal cual (caso Lía)
   logoUrl?: string; // logo de marca (Supabase Storage)
@@ -34,7 +35,7 @@ export type Miembro = {
   tenantId: string;
   nombre: string;
   correo: string;
-  rol: "dueno" | "equipo";
+  rol: "admin" | "ejecutivo" | "marketing";
   estado: "pendiente" | "activo";
   creado: string;
 };

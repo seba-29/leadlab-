@@ -1730,6 +1730,389 @@ body {
   color: #1a0d06;
 }
 
+/* ============================================================
+   Selector glass genérico (roles del equipo)
+   ============================================================ */
+.gsel {
+  position: relative;
+}
+.gsel-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 11px 9px 10px;
+  border-radius: 11px;
+  border: 1px solid var(--glass-brd);
+  background: var(--field-bg);
+  color: var(--text);
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+.gsel-btn:hover {
+  border-color: rgba(255, 107, 44, 0.32);
+}
+.gsel-btn.open {
+  border-color: rgba(255, 107, 44, 0.5);
+}
+.gsel-badge {
+  width: 12px;
+  height: 12px;
+  border-radius: 4px;
+  flex: none;
+}
+.rol-admin {
+  background: var(--orange);
+}
+.rol-ejecutivo {
+  background: #5eead4;
+}
+.rol-marketing {
+  background: #a78bfa;
+}
+.gsel-cur,
+.gsel-optxt {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  line-height: 1.25;
+}
+.gsel-cur b,
+.gsel-optxt b {
+  display: block;
+  font-size: 13px;
+  font-weight: 650;
+}
+.gsel-cur small,
+.gsel-optxt small {
+  display: block;
+  font-size: 11px;
+  color: var(--faint);
+}
+.gsel-chev {
+  width: 15px;
+  height: 15px;
+  flex: none;
+  color: var(--faint);
+  transition: transform 0.18s ease;
+}
+.gsel-btn.open .gsel-chev {
+  transform: rotate(180deg);
+  color: var(--t-orange);
+}
+.gsel-pop {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  z-index: 40;
+  padding: 6px;
+  border-radius: 13px;
+  border: 1px solid var(--glass-brd);
+  background: var(--panel-solid);
+  backdrop-filter: blur(20px) saturate(1.4);
+  -webkit-backdrop-filter: blur(20px) saturate(1.4);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.4);
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  animation: switchpop 0.16s ease;
+}
+.gsel-opt {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 9px 10px;
+  border: none;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--text);
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background 0.13s;
+}
+.gsel-opt:hover {
+  background: var(--hover);
+}
+.gsel-opt.on {
+  background: linear-gradient(120deg, rgba(255, 107, 44, 0.16), rgba(204, 120, 92, 0.06));
+}
+.gsel-check {
+  color: var(--t-orange);
+  font-weight: 800;
+  font-size: 12px;
+  flex: none;
+}
+.ag-tag.rol-tag {
+  color: var(--text);
+  border: 1px solid var(--glass-brd);
+  background: var(--chip);
+}
+.ag-tag.rol-admin {
+  background: rgba(255, 107, 44, 0.16);
+  border-color: rgba(255, 107, 44, 0.3);
+}
+.ag-tag.rol-ejecutivo {
+  background: rgba(94, 234, 212, 0.15);
+  border-color: rgba(94, 234, 212, 0.3);
+}
+.ag-tag.rol-marketing {
+  background: rgba(167, 139, 250, 0.16);
+  border-color: rgba(167, 139, 250, 0.3);
+}
+
+/* ============================================================
+   Dashboard comercial (KPIs + gráficos)
+   ============================================================ */
+.dash {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.dash-kpis {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(165px, 1fr));
+  gap: 12px;
+}
+.dash-kpi {
+  border: 1px solid var(--glass-brd);
+  background: var(--glass);
+  border-radius: 15px;
+  padding: 15px 16px;
+  backdrop-filter: blur(14px);
+}
+.dash-kpi.accent {
+  border-color: rgba(255, 107, 44, 0.34);
+  background: linear-gradient(145deg, rgba(255, 107, 44, 0.14), rgba(255, 255, 255, 0.02));
+}
+.dash-kpi.money {
+  border-color: rgba(198, 242, 78, 0.3);
+  background: linear-gradient(145deg, rgba(198, 242, 78, 0.12), rgba(255, 255, 255, 0.02));
+}
+.dash-kpi-label {
+  font-size: 10.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+.dash-kpi-value {
+  font-size: 25px;
+  font-weight: 750;
+  letter-spacing: -0.03em;
+  margin: 7px 0 3px;
+  font-variant-numeric: tabular-nums;
+}
+.dash-kpi.accent .dash-kpi-value {
+  color: var(--t-orange);
+}
+.dash-kpi.money .dash-kpi-value {
+  color: var(--t-lime);
+}
+.dash-kpi-sub {
+  font-size: 11.5px;
+  color: var(--muted);
+}
+.dash-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+.dash-card {
+  padding: 18px 20px;
+}
+.dash-wide {
+  grid-column: span 2;
+}
+.dash-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.dash-card-head .agente-block-title {
+  margin: 0;
+}
+.dash-total {
+  font-size: 19px;
+  font-weight: 750;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+.dash-total span {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--faint);
+  margin-left: 2px;
+}
+.dash .dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  display: inline-block;
+  flex: none;
+}
+/* Composición de ingresos */
+.stackbar {
+  display: flex;
+  height: 15px;
+  border-radius: 8px;
+  overflow: hidden;
+  background: var(--field-bg);
+  gap: 2px;
+}
+.stackbar-seg {
+  height: 100%;
+  transition: width 0.25s ease;
+}
+.stackbar-seg.base {
+  background: linear-gradient(90deg, var(--orange), var(--orange-soft));
+}
+.stackbar-seg.markup {
+  background: linear-gradient(90deg, var(--lime), #a8d63a);
+}
+.stackbar-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-top: 10px;
+  font-size: 12px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.stackbar-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.stackbar-legend .dot.base {
+  background: var(--orange);
+}
+.stackbar-legend .dot.markup {
+  background: var(--lime);
+}
+.markup-ctl {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--glass-brd);
+}
+.markup-ctl-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12.5px;
+  color: var(--muted);
+  margin-bottom: 9px;
+}
+.markup-ctl-head strong {
+  font-size: 16px;
+  color: var(--t-lime);
+  font-variant-numeric: tabular-nums;
+}
+.markup-ctl input[type="range"] {
+  width: 100%;
+  accent-color: var(--orange);
+  cursor: pointer;
+}
+/* Clientes por plan */
+.planbars {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.planbar-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+.planbar-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.planbar-n {
+  font-size: 15px;
+  font-weight: 750;
+  font-variant-numeric: tabular-nums;
+}
+.planbar-track {
+  height: 8px;
+  border-radius: 6px;
+  background: var(--field-bg);
+  overflow: hidden;
+}
+.planbar-fill {
+  height: 100%;
+  border-radius: 6px;
+  transition: width 0.3s ease;
+}
+.planbar-foot {
+  font-size: 11px;
+  color: var(--faint);
+  margin-top: 5px;
+  font-variant-numeric: tabular-nums;
+}
+/* Costo de IA por cliente */
+.costlist {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.costrow {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 12.5px;
+}
+.costrow-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex: none;
+}
+.costrow-name {
+  width: 108px;
+  flex: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--muted);
+}
+.costrow-bar {
+  flex: 1;
+  height: 7px;
+  border-radius: 5px;
+  background: var(--field-bg);
+  overflow: hidden;
+}
+.costrow-bar i {
+  display: block;
+  height: 100%;
+  border-radius: 5px;
+  opacity: 0.85;
+}
+.costrow-val {
+  flex: none;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+@media (max-width: 900px) {
+  .dash-grid {
+    grid-template-columns: 1fr;
+  }
+  .dash-wide {
+    grid-column: auto;
+  }
+}
+
 /* ---- Banner "viendo como X" ---- */
 .con-viewas {
   display: flex;
